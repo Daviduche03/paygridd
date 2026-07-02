@@ -1,0 +1,16 @@
+ALTER TYPE "public"."team_role" RENAME TO "business_role";
+ALTER TABLE "teams" RENAME TO "businesses";
+ALTER TABLE "users" RENAME COLUMN "team_id" TO "business_id";
+ALTER TABLE "users_on_team" RENAME TO "users_on_business";
+ALTER TABLE "users_on_business" RENAME COLUMN "team_id" TO "business_id";
+ALTER TABLE "customers" RENAME COLUMN "team_id" TO "business_id";
+ALTER TABLE "virtual_accounts" RENAME COLUMN "team_id" TO "business_id";
+ALTER TABLE "invoices" RENAME COLUMN "team_id" TO "business_id";
+ALTER TABLE "transactions" RENAME COLUMN "team_id" TO "business_id";
+ALTER TABLE "webhook_events" RENAME COLUMN "team_id" TO "business_id";
+ALTER INDEX "customers_team_id_idx" RENAME TO "customers_business_id_idx";
+ALTER INDEX "virtual_accounts_team_id_idx" RENAME TO "virtual_accounts_business_id_idx";
+ALTER INDEX "invoices_team_id_idx" RENAME TO "invoices_business_id_idx";
+ALTER INDEX "transactions_team_id_idx" RENAME TO "transactions_business_id_idx";
+ALTER INDEX "transactions_team_nomba_tx_idx" RENAME TO "transactions_business_nomba_tx_idx";
+ALTER INDEX "users_on_team_user_team_idx" RENAME TO "users_on_business_user_business_idx";
