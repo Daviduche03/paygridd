@@ -183,9 +183,11 @@ function SidebarNav({ expanded, onNavigate }: { expanded: boolean; onNavigate: (
           }
         >
           <span className="shrink-0">{iconMap[entry.slug] || <FileText size={18} />}</span>
-          <span className={`transition-opacity duration-200 ${expanded ? "opacity-100" : "opacity-0 md:hidden"}`}>
-            {entry.title}
-          </span>
+          {expanded && (
+            <span className="whitespace-nowrap overflow-hidden transition-opacity duration-150 delay-75">
+              {entry.title}
+            </span>
+          )}
         </NavLink>
       ))}
     </nav>
@@ -254,7 +256,7 @@ export default function App() {
       <aside
         onMouseEnter={() => setSidebarExpanded(true)}
         onMouseLeave={() => setSidebarExpanded(false)}
-        className="fixed left-0 z-[60] hidden md:flex flex-col border-r border-border bg-background transition-all duration-200"
+        className="fixed left-0 z-[60] hidden md:flex flex-col border-r border-border bg-background transition-all duration-200 overflow-hidden"
         style={{ top: "64px", height: "calc(100vh - 64px)", width: sidebarExpanded ? "240px" : "70px" }}
       >
         <SidebarNav expanded={sidebarExpanded} onNavigate={() => {}} />
