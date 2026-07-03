@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import express from "express";
 import cors from "cors";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -12,6 +14,13 @@ import { webhooksRoutes } from "@/routes/webhooks.routes";
 
 export function createApp() {
   const app = express();
+
+  // Serve frontend static files in production
+  const frontendDist = path.resolve(__dirname, "../../dashboard-react/dist");
+  if (existsSync(frontendDist)) {
+    app.use(express.static(frontendDist));
+    logger.info(`Serving frontend from ${frontendDist}`);
+  }
 
   // Security + basics
   app.use(
@@ -50,6 +59,16 @@ export function createApp() {
       createContext,
     }),
   );
+
+  // SPA fallback — serve index.html for non-API GET requests
+  if (existsSync(frontendDist)) {
+    app.get("*", (req, res, next) => {
+      if (req.path.startsWith("/trpc") || req.path.startsWith("/auth") || req.path.startsWith("/api") || req.path.startsWith("/webhooks") || req.path.startsWith("/files") || req.path.startsWith("/health")) {
+        return next();
+      }
+      res.sendFile(path.join(frontendDist, "index.html"));
+    });
+  }
 
   // 404 handler
   app.use((req, res) => {

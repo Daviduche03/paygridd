@@ -3,8 +3,5 @@ export function getApiUrl(): string {
   if (configured) {
     return configured.replace(/\/$/, "");
   }
-  if (import.meta.env.DEV) {
-    return "";
-  }
-  return "http://127.0.0.1:3003";
+  return "";
 }

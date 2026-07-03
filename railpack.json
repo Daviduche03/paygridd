@@ -5,6 +5,6 @@
     }
   },
   "deploy": {
-    "startCommand": "cd apps/dashboard-react && bun run preview"
+    "startCommand": "cd apps/api && TZ=UTC PORT=$PORT bun run src/index.ts"
   }
 }
