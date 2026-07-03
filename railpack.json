@@ -1,4 +1,10 @@
 {
-  "buildCommand": "cd apps/dashboard-react && bun install && bun run build",
-  "spaOutputDir": "apps/dashboard-react/dist"
+  "steps": {
+    "build": {
+      "commands": ["cd apps/dashboard-react && bun run build"]
+    }
+  },
+  "deploy": {
+    "startCommand": "cd apps/dashboard-react && bun run preview"
+  }
 }
