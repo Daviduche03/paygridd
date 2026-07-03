@@ -1,24 +1,44 @@
 # Webhooks
 
-Nomba sends HTTP POST requests to your webhook URL when events occur on your account.
+PayGrid sends HTTP POST requests to your webhook URL when events occur on your account.
 
 ## Supported Events
 
 | Event | Description |
 |-------|-------------|
-| `payment_success` | Payment credited to your Nomba account |
-| `payout_success` | Payout debited from your account |
-| `payment_failed` | Payment attempt failed |
-| `payment_reversal` | Payment reversed back to customer |
-| `payout_failed` | Payout failed to process |
-| `payout_refund` | Payout refunded to your account |
+| `payment_success` | A payment was credited to your account |
+| `payment_failed` | A payment attempt failed |
+| `payment_reversal` | A payment was reversed to the customer |
+| `payout_success` | A payout was processed successfully |
+| `payout_failed` | A payout failed to process |
+| `payout_refund` | A payout was refunded |
 
 ## Configuration
 
-Set your webhook URL in the Nomba dashboard under **Developer > Webhook Setup**.
+Set your webhook URL in the PayGrid dashboard under **Settings > Webhooks**.
 
-Your webhook URL: `https://paygrid.xyz/webhooks/nomba`
+```
+POST https://your-app.com/webhooks/paygrid
+```
 
 ## Signature Verification
 
-Every webhook includes `nomba-signature` and `nomba-timestamp` headers. Verify the HMAC-SHA256 signature using your secret key before processing.
+Every webhook includes verification headers. Verify the HMAC-SHA256 signature using your secret key before processing the payload.
+
+### Headers
+
+| Header | Description |
+|--------|-------------|
+| `paygrid-signature` | HMAC-SHA256 signature of the raw body |
+| `paygrid-timestamp` | Unix timestamp of when the event was sent |
+| `paygrid-signature-algorithm` | Algorithm used (default: `hmac-sha256`) |
+
+### Verification Steps
+
+1. Concatenate the raw request body with the timestamp
+2. Generate an HMAC-SHA256 hash using your secret key
+3. Compare the generated hash with the signature header
+
+## Retry Policy
+
+PayGrid retries failed webhook deliveries up to 3 times with exponential backoff.

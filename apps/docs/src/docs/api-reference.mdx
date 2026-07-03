@@ -2,30 +2,92 @@
 
 ## Authentication
 
-`POST /v1/auth/token/issue` — Obtain an access token.
+**Issue Token**
 
-`POST /v1/auth/token/refresh` — Refresh an expiring token.
+```bash
+POST /v1/auth/token/issue
+```
+
+Obtain an access token using client credentials.
+
+**Refresh Token**
+
+```bash
+POST /v1/auth/token/refresh
+```
+
+Refresh an expiring access token.
 
 ## Virtual Accounts
 
-`POST /v1/accounts/virtual` — Create a static virtual account.
+**Create Virtual Account**
 
-`POST /v1/accounts/virtual/{subAccountId}` — Create a virtual account for a sub-account.
+```bash
+POST /v1/accounts/virtual
+```
 
-`PATCH /v1/accounts/virtual/{identifier}` — Update a virtual account (name, callback URL, etc).
+Creates a static virtual account for receiving payments.
 
-`GET /v1/accounts/virtual/{identifier}` — Get a virtual account by account number or reference.
+**Create for Sub-Account**
 
-`GET /v1/accounts/virtual/list` — List virtual accounts with filters.
+```bash
+POST /v1/accounts/virtual/{subAccountId}
+```
 
-`DELETE /v1/accounts/virtual/{identifier}` — Expire a virtual account.
+Creates a virtual account linked to a sub-account.
+
+**Get Virtual Account**
+
+```bash
+GET /v1/accounts/virtual/{identifier}
+```
+
+Retrieve details by account number or reference.
+
+**List Virtual Accounts**
+
+```bash
+GET /v1/accounts/virtual/list
+```
+
+List virtual accounts with optional filters.
+
+**Update Virtual Account**
+
+```bash
+PATCH /v1/accounts/virtual/{identifier}
+```
+
+Update account name, callback URL, or expected amount.
+
+**Expire Virtual Account**
+
+```bash
+DELETE /v1/accounts/virtual/{identifier}
+```
+
+Expire a virtual account.
 
 ## Transactions
 
-`GET /v1/transactions/account` — List parent account transactions.
+**List Parent Account Transactions**
 
-`GET /v1/accounts/virtual/{identifier}/transactions` — List transactions for a virtual account.
+```bash
+GET /v1/transactions/account
+```
+
+**List Virtual Account Transactions**
+
+```bash
+GET /v1/accounts/virtual/{identifier}/transactions
+```
 
 ## Transfers
 
-`POST /v1/transfers/bank` — Transfer to a bank account.
+**Bank Transfer**
+
+```bash
+POST /v1/transfers/bank
+```
+
+Transfer funds to a bank account.

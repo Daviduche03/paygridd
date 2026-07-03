@@ -1,20 +1,21 @@
 # Virtual Accounts
 
-Virtual accounts are unique NGN account numbers generated for your customers to receive payments.
+Generate unique NGN account numbers for your customers to receive payments.
 
-## Types
+## Account Types
 
 | Type | Description |
 |------|-------------|
-| **Static** | Permanent account number, suitable for recurring customers |
-| **Dynamic** | Temporary account with optional expiry date and expected amount |
+| **Static** | Permanent account number for recurring customers |
+| **Dynamic** | Temporary account with optional expiry and expected amount |
 
 ## Create a Virtual Account
 
+Creates a static virtual account linked to your main account.
+
 ```bash
-curl -X POST https://api.nomba.com/v1/accounts/virtual \
+curl -X POST https://api.paygrid.xyz/v1/accounts/virtual \
   -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "accountId: YOUR_ACCOUNT_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "accountRef": "cust-abc123",
@@ -22,15 +23,44 @@ curl -X POST https://api.nomba.com/v1/accounts/virtual \
   }'
 ```
 
+### Response
+
+```json
+{
+  "code": "00",
+  "description": "Success",
+  "data": {
+    "accountRef": "cust-abc123",
+    "accountName": "John Doe",
+    "bankName": "Nombank MFB",
+    "bankAccountNumber": "9391076543",
+    "currency": "NGN"
+  }
+}
+```
+
 ## Create for a Sub-Account
 
+Creates a virtual account linked to a specific sub-account:
+
 ```bash
-curl -X POST https://api.nomba.com/v1/accounts/virtual/{subAccountId} \
+curl -X POST https://api.paygrid.xyz/v1/accounts/virtual/{subAccountId} \
   -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "accountId: YOUR_ACCOUNT_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "accountRef": "cust-abc123",
     "accountName": "John Doe"
+  }'
+```
+
+## Update a Virtual Account
+
+```bash
+curl -X PATCH https://api.paygrid.xyz/v1/accounts/virtual/{identifier} \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountName": "Jane Doe",
+    "callbackUrl": "https://your-app.com/webhooks/callback"
   }'
 ```

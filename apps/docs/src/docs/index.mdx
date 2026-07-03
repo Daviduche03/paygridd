@@ -1,93 +1,10 @@
 # PayGrid Documentation
 
-Welcome to the PayGrid developer documentation. PayGrid is a payment management dashboard powered by Nomba's API — built for Nigerian businesses to manage virtual accounts, track transactions, handle webhooks, and verify KYC tiers.
+Welcome to the PayGrid developer documentation. PayGrid provides a simple API for Nigerian businesses to manage payments, virtual accounts, and transaction webhooks.
 
-## Getting Started
+## Quick Links
 
-New to PayGrid? Start here to set up your account and make your first API call.
-
-<div className="border border-border rounded-lg p-5 my-6 bg-card">
-  <div className="flex items-start gap-4">
-    <div className="w-10 h-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center text-lg font-semibold shrink-0">1</div>
-    <div>
-      <div className="font-semibold mb-1">Create a Nomba Account</div>
-      <div className="text-sm text-muted-foreground">Sign up at nomba.com and get your API keys from Settings &gt; Webhook and API Keys.</div>
-    </div>
-  </div>
-  <div className="flex items-start gap-4 mt-4">
-    <div className="w-10 h-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center text-lg font-semibold shrink-0">2</div>
-    <div>
-      <div className="font-semibold mb-1">Authenticate</div>
-      <div className="text-sm text-muted-foreground">Use OAuth2 client credentials to obtain an access token. Tokens expire after 25 minutes.</div>
-    </div>
-  </div>
-  <div className="flex items-start gap-4 mt-4">
-    <div className="w-10 h-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center text-lg font-semibold shrink-0">3</div>
-    <div>
-      <div className="font-semibold mb-1">Create a Virtual Account</div>
-      <div className="text-sm text-muted-foreground">Generate a unique NGN account number for your customer to receive payments.</div>
-    </div>
-  </div>
-</div>
-
-## Guides
-
-<div className="grid gap-4 sm:grid-cols-2 my-6">
-  <a href="/docs/getting-started" className="block border border-border rounded-lg p-5 bg-card hover:bg-accent transition-colors no-underline">
-    <div className="flex items-center gap-3 mb-2">
-      <Terminal size={20} />
-      <span className="font-semibold">Getting Started</span>
-    </div>
-    <div className="text-sm text-muted-foreground">Set up authentication, understand base URLs, and make your first API call.</div>
-  </a>
-  <a href="/docs/virtual-accounts" className="block border border-border rounded-lg p-5 bg-card hover:bg-accent transition-colors no-underline">
-    <div className="flex items-center gap-3 mb-2">
-      <CreditCard size={20} />
-      <span className="font-semibold">Virtual Accounts</span>
-    </div>
-    <div className="text-sm text-muted-foreground">Create static and dynamic virtual accounts, manage sub-accounts.</div>
-  </a>
-  <a href="/docs/webhooks" className="block border border-border rounded-lg p-5 bg-card hover:bg-accent transition-colors no-underline">
-    <div className="flex items-center gap-3 mb-2">
-      <Webhook size={20} />
-      <span className="font-semibold">Webhooks</span>
-    </div>
-    <div className="text-sm text-muted-foreground">Configure webhook URLs, verify signatures, handle events.</div>
-  </a>
-  <a href="/docs/api-reference" className="block border border-border rounded-lg p-5 bg-card hover:bg-accent transition-colors no-underline">
-    <div className="flex items-center gap-3 mb-2">
-      <FileText size={20} />
-      <span className="font-semibold">API Reference</span>
-    </div>
-    <div className="text-sm text-muted-foreground">Complete endpoint reference for virtual accounts, transactions, transfers.</div>
-  </a>
-</div>
-
-## Environment Details
-
-<div className="border border-border rounded-lg overflow-hidden my-6">
-  <table>
-    <thead>
-      <tr>
-        <th>Environment</th>
-        <th>Base URL</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Production</td>
-        <td><code>https://api.nomba.com</code></td>
-      </tr>
-      <tr>
-        <td>Sandbox</td>
-        <td><code>https://sandbox.nomba.com</code></td>
-      </tr>
-      <tr>
-        <td>Webhook Endpoint</td>
-        <td><code>https://paygrid.xyz/webhooks/nomba</code></td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-
-import { Terminal, CreditCard, Webhook, FileText } from "lucide-react";
+- [Getting Started](/docs/getting-started)
+- [Virtual Accounts](/docs/virtual-accounts)
+- [Webhooks](/docs/webhooks)
+- [API Reference](/docs/api-reference)

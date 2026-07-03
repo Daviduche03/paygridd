@@ -1,18 +1,14 @@
 # Getting Started
 
-## Prerequisites
-
-- A Nomba business account
-- API keys from the Nomba dashboard (Settings > Webhook and API Keys)
+Learn how to set up and authenticate with the PayGrid API.
 
 ## Authentication
 
-PayGrid uses OAuth2 client credentials to obtain an access token from Nomba. Tokens expire after 25 minutes.
+PayGrid uses OAuth2 client credentials for API authentication. You'll receive your credentials when you sign up.
 
 ```bash
-curl -X POST https://api.nomba.com/v1/auth/token/issue \
+curl -X POST https://api.paygrid.xyz/v1/auth/token/issue \
   -H "Content-Type: application/json" \
-  -H "accountId: YOUR_ACCOUNT_ID" \
   -d '{
     "grant_type": "client_credentials",
     "client_id": "YOUR_CLIENT_ID",
@@ -20,9 +16,41 @@ curl -X POST https://api.nomba.com/v1/auth/token/issue \
   }'
 ```
 
+The response includes an `access_token` (expires after 25 minutes) and a `refresh_token`.
+
 ## Base URLs
 
 | Environment | URL |
 |-------------|-----|
-| Production  | `https://api.nomba.com` |
-| Sandbox     | `https://sandbox.nomba.com` |
+| Production | `https://api.paygrid.xyz` |
+| Sandbox | `https://sandbox.paygrid.xyz` |
+
+## Webhook URL
+
+Configure your webhook endpoint:
+
+```
+POST https://your-app.com/webhooks/paygrid
+```
+
+## Headers
+
+All API requests require the following header:
+
+| Header | Value |
+|--------|-------|
+| `Authorization` | `Bearer YOUR_ACCESS_TOKEN` |
+| `Content-Type` | `application/json` |
+
+## Errors
+
+The API uses conventional HTTP response codes:
+
+| Code | Meaning |
+|------|---------|
+| 200 | Success |
+| 400 | Bad request |
+| 401 | Unauthorized |
+| 404 | Not found |
+| 429 | Rate limited |
+| 500 | Server error |
