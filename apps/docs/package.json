@@ -13,6 +13,7 @@
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.6.0",
     "@mdx-js/react": "^3.1.0",
+    "lucide-react": "^0.501.0",
     "ui": "workspace:*"
   },
   "devDependencies": {

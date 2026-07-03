@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate, NavLink, useParams } from "react-router-dom";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { Moon, Sun } from "lucide-react";
 
 const docs = import.meta.glob("./docs/**/*.mdx", { eager: true }) as Record<
   string,
@@ -45,6 +46,35 @@ function DocPage() {
   );
 }
 
+function ThemeToggle() {
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
+
+  useEffect(() => {
+    const obs = new MutationObserver(() => {
+      setDark(document.documentElement.classList.contains("dark"));
+    });
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+
+  function toggle() {
+    const next = !dark;
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+    setDark(next);
+  }
+
+  return (
+    <button
+      onClick={toggle}
+      className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground"
+      aria-label="Toggle theme"
+    >
+      {dark ? <Sun size={16} /> : <Moon size={16} />}
+    </button>
+  );
+}
+
 function Sidebar() {
   const groups = useMemo(() => {
     const map = new Map<string, DocEntry[]>();
@@ -59,9 +89,12 @@ function Sidebar() {
   }, []);
 
   return (
-    <aside className="w-64 shrink-0 border-r border-border h-screen overflow-y-auto p-4">
-      <div className="text-lg font-bold mb-6">PayGrid Docs</div>
-      <nav className="space-y-6">
+    <aside className="w-64 shrink-0 border-r border-border h-screen overflow-y-auto p-4 flex flex-col">
+      <div className="flex items-center justify-between mb-6">
+        <div className="text-lg font-bold">PayGrid Docs</div>
+        <ThemeToggle />
+      </div>
+      <nav className="space-y-6 flex-1">
         {groups.map(([group, entries]) => (
           <div key={group}>
             <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
