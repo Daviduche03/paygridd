@@ -1,0 +1,4 @@
+{
+  "buildCommand": "cd apps/dashboard-react && bun install && bun run build",
+  "spaOutputDir": "apps/dashboard-react/dist"
+}
