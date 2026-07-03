@@ -75,14 +75,14 @@ export const banksRouter = t.router({
 });
 
 const FALLBACK_INSTITUTIONS = [
-  { id: "ng_001", name: "First Bank of Nigeria", logo: null, popularity: 100, availableHistory: 90, maximumConsentValidity: null, provider: "gocardless", type: null, countries: ["NG"] },
-  { id: "ng_002", name: "GTBank (Guaranty Trust Bank)", logo: null, popularity: 95, availableHistory: 90, maximumConsentValidity: null, provider: "gocardless", type: null, countries: ["NG"] },
-  { id: "ng_003", name: "Access Bank", logo: null, popularity: 90, availableHistory: 90, maximumConsentValidity: null, provider: "gocardless", type: null, countries: ["NG"] },
-  { id: "ng_004", name: "Zenith Bank", logo: null, popularity: 85, availableHistory: 90, maximumConsentValidity: null, provider: "gocardless", type: null, countries: ["NG"] },
-  { id: "ng_005", name: "United Bank for Africa (UBA)", logo: null, popularity: 80, availableHistory: 90, maximumConsentValidity: null, provider: "gocardless", type: null, countries: ["NG"] },
-  { id: "ng_006", name: "Kuda Bank", logo: null, popularity: 75, availableHistory: 90, maximumConsentValidity: null, provider: "gocardless", type: null, countries: ["NG"] },
-  { id: "ng_007", name: "Moniepoint Microfinance Bank", logo: null, popularity: 70, availableHistory: 90, maximumConsentValidity: null, provider: "gocardless", type: null, countries: ["NG"] },
-  { id: "ng_008", name: "Opay", logo: null, popularity: 65, availableHistory: 90, maximumConsentValidity: null, provider: "gocardless", type: null, countries: ["NG"] },
+  { id: "ng_001", name: "First Bank of Nigeria", logo: null, popularity: 100, availableHistory: 90, maximumConsentValidity: null, provider: "nomba", type: null, countries: ["NG"] },
+  { id: "ng_002", name: "GTBank (Guaranty Trust Bank)", logo: null, popularity: 95, availableHistory: 90, maximumConsentValidity: null, provider: "nomba", type: null, countries: ["NG"] },
+  { id: "ng_003", name: "Access Bank", logo: null, popularity: 90, availableHistory: 90, maximumConsentValidity: null, provider: "nomba", type: null, countries: ["NG"] },
+  { id: "ng_004", name: "Zenith Bank", logo: null, popularity: 85, availableHistory: 90, maximumConsentValidity: null, provider: "nomba", type: null, countries: ["NG"] },
+  { id: "ng_005", name: "United Bank for Africa (UBA)", logo: null, popularity: 80, availableHistory: 90, maximumConsentValidity: null, provider: "nomba", type: null, countries: ["NG"] },
+  { id: "ng_006", name: "Kuda Bank", logo: null, popularity: 75, availableHistory: 90, maximumConsentValidity: null, provider: "nomba", type: null, countries: ["NG"] },
+  { id: "ng_007", name: "Moniepoint Microfinance Bank", logo: null, popularity: 70, availableHistory: 90, maximumConsentValidity: null, provider: "nomba", type: null, countries: ["NG"] },
+  { id: "ng_008", name: "Opay", logo: null, popularity: 65, availableHistory: 90, maximumConsentValidity: null, provider: "nomba", type: null, countries: ["NG"] },
 ];
 
 export const institutionsRouter = t.router({

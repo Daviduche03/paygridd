@@ -31,10 +31,6 @@ export const LogEvents = {
     name: "Connect Bank Authorized",
     channel: "bank",
   },
-  GoCardLessLinkFailed: {
-    name: "GoCardLess Link Failed",
-    channel: "gocardless",
-  },
   ConnectBankFailed: {
     name: "Connect Bank Failed",
     channel: "bank",
@@ -103,10 +99,6 @@ export const LogEvents = {
     name: "Update Currency",
     channel: "transaction",
   },
-  GoCardLessLinkCreated: {
-    name: "GoCardLess Link Created",
-    channel: "gocardless",
-  },
   InboxConnected: {
     name: "Inbox Connected",
     channel: "inbox",
@@ -118,18 +110,6 @@ export const LogEvents = {
   ReconnectConnection: {
     name: "Reconnect Connection",
     channel: "bank",
-  },
-  EnableBankingLinkReconnected: {
-    name: "Enable Banking Link Reconnected",
-    channel: "enablebanking",
-  },
-  EnableBankingLinkCreated: {
-    name: "Enable Banking Link Created",
-    channel: "enablebanking",
-  },
-  EnableBankingLinkFailed: {
-    name: "Enable Banking Link Failed",
-    channel: "enablebanking",
   },
   DeleteConnection: {
     name: "Delete Connection",

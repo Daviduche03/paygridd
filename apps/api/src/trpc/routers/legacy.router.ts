@@ -77,15 +77,7 @@ export const bankConnectionsRouter = t.router({
   get: stubQuery(z.object({ id: z.string() })),
   reconnect: stubMutation(z.object({ id: z.string() })),
 });
-export const bankingRouter = t.router({
-  enablebankingExchange: stubMutation(z.object({})),
-  enablebankingLink: stubMutation(z.object({})),
-  getProviderAccounts: stubQuery(z.object({})),
-  gocardlessAgreement: stubMutation(z.object({})),
-  gocardlessLink: stubMutation(z.object({})),
-  plaidExchange: stubMutation(z.object({})),
-  plaidLink: stubMutation(z.object({})),
-});
+
 export const billingRouter = t.router({
   cancelSubscription: stubMutation(z.object({})),
   checkInvoiceStatus: stubQuery(z.object({ invoiceId: z.string() })),
