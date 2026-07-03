@@ -17,8 +17,8 @@ export function CodeBlock({ children, className }: CodeBlockProps) {
   }
 
   return (
-    <div className="relative group">
-      <pre className={className}>{children}</pre>
+    <div className="relative group border border-border rounded-lg overflow-hidden mb-4">
+      <pre className={`bg-muted ${className || ""}`}>{children}</pre>
       <button
         onClick={copy}
         className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded border border-border bg-background opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent"
@@ -34,7 +34,16 @@ function extractText(children: ReactNode): string {
   if (typeof children === "string") return children;
   if (Array.isArray(children)) return children.map(extractText).join("");
   if (children && typeof children === "object" && "props" in children) {
-    return extractText((children as { props: { children?: ReactNode } }).props.children);
+    const el = children as { props: { children?: ReactNode; className?: string } };
+    // If it's a <code> element, extract from its children
+    if (el.props.className?.includes("language-")) {
+      return extractText(el.props.children);
+    }
+    // If it's a span with tokens (rehype-pretty-code), extract text
+    if (el.props.className?.includes("line")) {
+      return extractText(el.props.children);
+    }
+    return extractText(el.props.children);
   }
   return "";
 }
