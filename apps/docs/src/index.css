@@ -68,12 +68,15 @@
 }
 .prose a {
   color: hsl(var(--foreground));
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  text-decoration: none;
   transition: opacity 0.15s;
 }
 .prose a:hover {
   opacity: 0.7;
+}
+.prose .underline {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .prose table {
   width: 100%;
@@ -81,18 +84,23 @@
   margin-bottom: 1.5rem;
   font-size: 0.875rem;
 }
-.prose th {
-  border: 1px solid hsl(var(--border));
-  padding: 0.5rem 0.75rem;
+.prose thead th {
+  border-bottom: 2px solid hsl(var(--border));
+  padding: 0.625rem 0.75rem;
   text-align: left;
   font-weight: 600;
-  background: hsl(var(--muted));
-}
-.prose td {
-  border: 1px solid hsl(var(--border));
-  padding: 0.5rem 0.75rem;
-  text-align: left;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: hsl(var(--muted-foreground));
+}
+.prose tbody td {
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+}
+.prose tbody tr:last-child td {
+  border-bottom: none;
 }
 .prose blockquote {
   border-left: 3px solid hsl(var(--border));
