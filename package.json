@@ -42,5 +42,11 @@
     "@biomejs/biome": "2.4.10",
     "turbo": "2.9.3",
     "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "4.0.0",
+    "@ai-sdk/react": "4.0.15",
+    "ai": "4.3.19",
+    "nuqs": "0.0.0-snapshot.2025-10-10.7b3a5b"
   }
 }

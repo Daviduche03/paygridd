@@ -5,7 +5,6 @@ import { Link, useLocation } from "react-router-dom";
 
 const tabs = [
   { path: "/settings", label: "General" },
-  { path: "/settings/accounts", label: "Accounts" },
   { path: "/settings/members", label: "Members" },
   { path: "/settings/kyc", label: "KYC" },
   { path: "/settings/developer", label: "Developer" },

@@ -21,7 +21,6 @@ import AccountBusinessesPage from "@/pages/account/businesses";
 import AccountDateLocalePage from "@/pages/account/date-and-locale";
 import AccountSupportPage from "@/pages/account/support";
 import SettingsPage from "@/pages/settings";
-import SettingsAccountsPage from "@/pages/settings/accounts";
 import SettingsMembersPage from "@/pages/settings/members";
 import SettingsDeveloperPage from "@/pages/settings/developer";
 import SettingsKycPage from "@/pages/settings/kyc";
@@ -75,7 +74,6 @@ export default function App() {
             <Route path="/account/date-and-locale" element={<AccountDateLocalePage />} />
             <Route path="/account/support" element={<AccountSupportPage />} />
             <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/settings/accounts" element={<SettingsAccountsPage />} />
             <Route path="/settings/members" element={<SettingsMembersPage />} />
             <Route path="/settings/developer" element={<SettingsDeveloperPage />} />
             <Route path="/settings/kyc" element={<SettingsKycPage />} />

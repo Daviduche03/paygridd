@@ -3,7 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { LogEvents } from "eventbus/events";
 import { useOpenPanel } from "@openpanel/nextjs";
-import { DefaultChatTransport } from "ai";
+import { DefaultChatTransport } from "@/ai-transport";
 import type { ReactNode } from "react";
 import {
   createContext,

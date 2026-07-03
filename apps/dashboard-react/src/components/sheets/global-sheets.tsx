@@ -1,7 +1,6 @@
 "use client";
 
 import { ConnectTransactionsModal } from "@/components/modals/connect-transactions-modal";
-import { SelectBankAccountsModal } from "@/components/modals/select-bank-accounts";
 import { AppDetailSheet } from "@/components/sheets/app-detail-sheet";
 import { CategoryCreateSheet } from "@/components/sheets/category-create-sheet";
 import { CategoryEditSheet } from "@/components/sheets/category-edit-sheet";
@@ -34,8 +33,6 @@ export function GlobalSheets() {
       <TransactionSheet />
       <TransactionCreateSheet />
       <TransactionEditSheet />
-
-      <SelectBankAccountsModal />
 
       <DocumentSheet />
 

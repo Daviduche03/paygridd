@@ -4,22 +4,16 @@
 import { LogEvents } from "eventbus/events";
 import { BulkReconciliationAnimation } from "ui/animations/bulk-reconciliation";
 import { SubmitButton } from "ui/submit-button";
-import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { parseAsString, useQueryStates } from "nuqs";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppDetailSheet } from "@/components/sheets/app-detail-sheet";
 import { useOnboardingStep } from "@/hooks/use-onboarding-step";
 import { useOnboardingTracking } from "@/hooks/use-onboarding-tracking";
-import { useTRPC } from "@/trpc/client";
-import {
-  type InboxSyncState,
-  OnboardingSyncStatus,
-} from "./onboarding-sync-status";
+
 import { OnboardingUserMenu } from "./onboarding-user-menu";
 import { ConnectBankNigeriaStep } from "./steps/connect-bank-nigeria-step";
 import { CreateBusinessStep } from "./steps/create-business-step";
@@ -160,16 +154,6 @@ export function OnboardingPage({
   const [hasBusiness, setHasBusiness] = useState(!!user.businessId);
   const [hasFullName, setHasFullName] = useState(!!user.fullName);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [inboxSync, setInboxSync] = useState<InboxSyncState>(null);
-  const [syncVisible, setSyncVisible] = useState(false);
-  const trpc = useTRPC();
-  const queryClient = useQueryClient();
-
-  const [connectionParams, setConnectionParams] = useQueryStates({
-    connected: parseAsString,
-    provider: parseAsString,
-    countryCode: parseAsString,
-  });
 
   const { step, stepKey, nextStep, prevStep, totalSteps } = useOnboardingStep({
     hasBusiness,
@@ -177,20 +161,6 @@ export function OnboardingPage({
   });
 
   const { trackNavigation, trackEvent } = useOnboardingTracking(step);
-
-  useEffect(() => {
-    if (
-      connectionParams.connected === "true" &&
-      connectionParams.provider &&
-      !inboxSync
-    ) {
-      setInboxSync({ provider: connectionParams.provider });
-      trackEvent(LogEvents.OnboardingInboxConnected, {
-        provider: connectionParams.provider,
-      });
-      setConnectionParams({ connected: null, provider: null });
-    }
-  }, [connectionParams, inboxSync, setConnectionParams, trackEvent]);
 
   const handleBusinessCreated = useCallback(() => {
     setHasBusiness(true);
@@ -205,8 +175,6 @@ export function OnboardingPage({
   const handleLoadingChange = useCallback((loading: boolean) => {
     setIsSubmitting(loading);
   }, []);
-
-
 
   const steps: StepConfig[] = useMemo(
     () => [
@@ -343,18 +311,9 @@ export function OnboardingPage({
       <div className="w-full lg:w-1/2 flex flex-col items-center p-8 lg:p-12 pt-10 dark:bg-[#0c0c0c] text-foreground">
         <div className="w-full max-w-md flex flex-col h-full relative">
           <div className="relative h-6 mb-2">
-            <div className="absolute inset-0 flex items-center justify-center z-10">
-              <OnboardingSyncStatus
-                bankSync={null}
-                inboxSync={inboxSync}
-                onVisibilityChange={setSyncVisible}
-              />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <ProgressBar currentStep={step} totalSteps={totalSteps} />
             </div>
-            {!syncVisible && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <ProgressBar currentStep={step} totalSteps={totalSteps} />
-              </div>
-            )}
           </div>
 
           <div className="flex-1 flex flex-col justify-center pt-20 min-h-0 overflow-y-auto scrollbar-hide">
