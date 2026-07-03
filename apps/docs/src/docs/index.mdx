@@ -1,10 +1,90 @@
+import { Terminal, CreditCard, Webhook, FileText } from "lucide-react";
+
 # PayGrid Documentation
 
-Welcome to the PayGrid developer documentation. PayGrid provides a simple API for Nigerian businesses to manage payments, virtual accounts, and transaction webhooks.
+Build payment flows for your Nigerian business with PayGrid's API. Manage virtual accounts, track transactions, and receive real-time webhook notifications.
 
-## Quick Links
+<div className="grid gap-4 sm:grid-cols-2 my-8">
+  <a href="/docs/getting-started" className="group block border border-border rounded-lg p-5 bg-card hover:bg-accent transition-colors no-underline">
+    <div className="flex items-center gap-3 mb-3">
+      <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary">
+        <Terminal size={18} />
+      </div>
+      <span className="font-medium text-foreground">Getting Started</span>
+    </div>
+    <p className="text-sm text-muted-foreground leading-relaxed">
+      Set up authentication, understand base URLs, and make your first API call in minutes.
+    </p>
+  </a>
+  <a href="/docs/virtual-accounts" className="group block border border-border rounded-lg p-5 bg-card hover:bg-accent transition-colors no-underline">
+    <div className="flex items-center gap-3 mb-3">
+      <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary">
+        <CreditCard size={18} />
+      </div>
+      <span className="font-medium text-foreground">Virtual Accounts</span>
+    </div>
+    <p className="text-sm text-muted-foreground leading-relaxed">
+      Create unique NGN account numbers for your customers to receive payments.
+    </p>
+  </a>
+  <a href="/docs/webhooks" className="group block border border-border rounded-lg p-5 bg-card hover:bg-accent transition-colors no-underline">
+    <div className="flex items-center gap-3 mb-3">
+      <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary">
+        <Webhook size={18} />
+      </div>
+      <span className="font-medium text-foreground">Webhooks</span>
+    </div>
+    <p className="text-sm text-muted-foreground leading-relaxed">
+      Receive and verify real-time payment notifications with HMAC signatures.
+    </p>
+  </a>
+  <a href="/docs/api-reference" className="group block border border-border rounded-lg p-5 bg-card hover:bg-accent transition-colors no-underline">
+    <div className="flex items-center gap-3 mb-3">
+      <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary">
+        <FileText size={18} />
+      </div>
+      <span className="font-medium text-foreground">API Reference</span>
+    </div>
+    <p className="text-sm text-muted-foreground leading-relaxed">
+      Complete endpoint reference for virtual accounts, transactions, and transfers.
+    </p>
+  </a>
+</div>
 
-- [Getting Started](/docs/getting-started)
-- [Virtual Accounts](/docs/virtual-accounts)
-- [Webhooks](/docs/webhooks)
-- [API Reference](/docs/api-reference)
+## Quick Start
+
+Create a virtual account with a single API call:
+
+```bash
+curl -X POST https://api.paygrid.xyz/v1/accounts/virtual \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountRef": "cust-abc123",
+    "accountName": "Acme Inc"
+  }'
+```
+
+The response includes a unique bank account number your customer can use to receive payments:
+
+```json
+{
+  "code": "00",
+  "description": "Success",
+  "data": {
+    "accountRef": "cust-abc123",
+    "accountName": "Acme Inc",
+    "bankName": "Nombank MFB",
+    "bankAccountNumber": "9391076543",
+    "currency": "NGN"
+  }
+}
+```
+
+## Environment
+
+| Environment | Base URL |
+|-------------|----------|
+| Production | `https://api.paygrid.xyz` |
+| Sandbox | `https://sandbox.paygrid.xyz` |
+| Webhooks | `https://your-app.com/webhooks/paygrid` |
