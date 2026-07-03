@@ -207,9 +207,10 @@ function MobileMenu({ onNavigate }: { onNavigate: (slug: string) => void }) {
         <div className="fixed inset-0 z-[80] flex">
           <div className="fixed inset-0 bg-black/40" onClick={() => setOpen(false)} />
           <div className="relative w-[280px] bg-background border-r border-border h-full flex flex-col">
-            <div className="flex items-center justify-between h-16 px-4 border-b border-border">
-              <span className="text-lg font-bold">PayGrid Docs</span>
-              <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground">
+            <div className="flex items-center gap-3 h-16 px-4 border-b border-border">
+              <img src="/images/logo.png" alt="PayGrid" className="h-8 w-auto shrink-0" />
+              <span className="text-sm font-semibold">PayGrid Docs</span>
+              <button onClick={() => setOpen(false)} className="ml-auto text-muted-foreground hover:text-foreground">
                 <X size={18} />
               </button>
             </div>
@@ -236,7 +237,7 @@ export default function App() {
       {/* Fixed header */}
       <header className="fixed top-0 left-0 right-0 z-[70] h-16 border-b border-border bg-background flex items-stretch">
         <div className="hidden md:flex w-[70px] shrink-0 items-center justify-center border-r border-border">
-          <span className="text-lg font-bold">PG</span>
+          <img src="/images/logo.png" alt="PayGrid" className="h-8 w-auto" />
         </div>
         <div className="flex-1 flex items-center gap-4 px-4 md:px-6">
           <MobileMenu onNavigate={handleSearchSelect} />
