@@ -1,7 +1,10 @@
 {
   "steps": {
     "build": {
-      "commands": ["cd apps/dashboard-react && bun run build"]
+      "commands": [
+        "cd apps/docs && bun run build",
+        "cd apps/dashboard-react && bun run build"
+      ]
     }
   },
   "deploy": {

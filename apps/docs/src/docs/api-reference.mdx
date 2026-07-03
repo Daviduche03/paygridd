@@ -1,0 +1,31 @@
+# API Reference
+
+## Authentication
+
+`POST /v1/auth/token/issue` — Obtain an access token.
+
+`POST /v1/auth/token/refresh` — Refresh an expiring token.
+
+## Virtual Accounts
+
+`POST /v1/accounts/virtual` — Create a static virtual account.
+
+`POST /v1/accounts/virtual/{subAccountId}` — Create a virtual account for a sub-account.
+
+`PATCH /v1/accounts/virtual/{identifier}` — Update a virtual account (name, callback URL, etc).
+
+`GET /v1/accounts/virtual/{identifier}` — Get a virtual account by account number or reference.
+
+`GET /v1/accounts/virtual/list` — List virtual accounts with filters.
+
+`DELETE /v1/accounts/virtual/{identifier}` — Expire a virtual account.
+
+## Transactions
+
+`GET /v1/transactions/account` — List parent account transactions.
+
+`GET /v1/accounts/virtual/{identifier}/transactions` — List transactions for a virtual account.
+
+## Transfers
+
+`POST /v1/transfers/bank` — Transfer to a bank account.

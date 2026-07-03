@@ -42,6 +42,22 @@ export function createApp() {
     next();
   });
 
+  // Serve docs static files
+  const docsDist = path.resolve(__dirname, "../../docs/dist");
+  if (existsSync(docsDist)) {
+    app.use("/docs", express.static(docsDist));
+    logger.info(`Serving docs from ${docsDist}`);
+  }
+
+  // Docs SPA fallback
+  app.get("/docs/*", (req, res, next) => {
+    if (existsSync(docsDist)) {
+      res.sendFile(path.join(docsDist, "index.html"));
+    } else {
+      next();
+    }
+  });
+
   // Health check (before routes)
   app.get("/health", (_req, res) => {
     res.json({ success: true, data: { status: "ok", timestamp: new Date().toISOString() } });
@@ -63,7 +79,7 @@ export function createApp() {
   // SPA fallback — serve index.html for non-API GET requests
   if (existsSync(frontendDist)) {
     app.get("*", (req, res, next) => {
-      if (req.path.startsWith("/trpc") || req.path.startsWith("/auth") || req.path.startsWith("/api") || req.path.startsWith("/webhooks") || req.path.startsWith("/files") || req.path.startsWith("/health")) {
+      if (req.path.startsWith("/trpc") || req.path.startsWith("/auth") || req.path.startsWith("/api") || req.path.startsWith("/webhooks") || req.path.startsWith("/files") || req.path.startsWith("/docs") || req.path.startsWith("/health")) {
         return next();
       }
       res.sendFile(path.join(frontendDist, "index.html"));

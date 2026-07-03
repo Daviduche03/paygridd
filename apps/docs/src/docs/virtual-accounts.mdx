@@ -1,0 +1,36 @@
+# Virtual Accounts
+
+Virtual accounts are unique NGN account numbers generated for your customers to receive payments.
+
+## Types
+
+| Type | Description |
+|------|-------------|
+| **Static** | Permanent account number, suitable for recurring customers |
+| **Dynamic** | Temporary account with optional expiry date and expected amount |
+
+## Create a Virtual Account
+
+```bash
+curl -X POST https://api.nomba.com/v1/accounts/virtual \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "accountId: YOUR_ACCOUNT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountRef": "cust-abc123",
+    "accountName": "John Doe"
+  }'
+```
+
+## Create for a Sub-Account
+
+```bash
+curl -X POST https://api.nomba.com/v1/accounts/virtual/{subAccountId} \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "accountId: YOUR_ACCOUNT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountRef": "cust-abc123",
+    "accountName": "John Doe"
+  }'
+```

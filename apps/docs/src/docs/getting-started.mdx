@@ -1,0 +1,28 @@
+# Getting Started
+
+## Prerequisites
+
+- A Nomba business account
+- API keys from the Nomba dashboard (Settings > Webhook and API Keys)
+
+## Authentication
+
+PayGrid uses OAuth2 client credentials to obtain an access token from Nomba. Tokens expire after 25 minutes.
+
+```bash
+curl -X POST https://api.nomba.com/v1/auth/token/issue \
+  -H "Content-Type: application/json" \
+  -H "accountId: YOUR_ACCOUNT_ID" \
+  -d '{
+    "grant_type": "client_credentials",
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET"
+  }'
+```
+
+## Base URLs
+
+| Environment | URL |
+|-------------|-----|
+| Production  | `https://api.nomba.com` |
+| Sandbox     | `https://sandbox.nomba.com` |
