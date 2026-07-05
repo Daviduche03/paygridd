@@ -320,6 +320,19 @@ export class NombaApi {
     return response.data;
   }
 
+  async getParentAccountBalance(): Promise<{ balance: number; currency: string } | null> {
+    try {
+      const txns = await this.getBankTransactions({ limit: 1 });
+      const latest = txns.results[0];
+      if (latest) {
+        return { balance: latest.walletBalance, currency: latest.currency ?? "NGN" };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   async getBankTransactions(params?: {
     limit?: number;
     cursor?: string;

@@ -559,7 +559,7 @@ GET /api/v1/transactions/:id
 
 ## Business
 
-View your business profile.
+View your business profile and account balance.
 
 ### Get Business
 
@@ -584,6 +584,30 @@ GET /api/v1/business
   }
 }
 ```
+
+### Get Account Balance
+
+```bash
+GET /api/v1/business/balance
+```
+
+**Scope:** `business.read`
+
+Returns the current wallet balance of your parent account from the payment provider.
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": {
+    "balance": 1500000.00,
+    "currency": "NGN"
+  }
+}
+```
+
+If the balance cannot be retrieved (e.g. provider is unavailable), it returns `{ "balance": 0, "currency": "NGN" }`.
 
 ---
 

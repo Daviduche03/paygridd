@@ -4,6 +4,9 @@ import type { Response } from "express";
 import { asyncHandler } from "@/utils/asyncHandler";
 import { authenticateApiKey, requireScope } from "@/middleware/api-key-auth.middleware";
 import { businessRepository } from "@/repositories/business.repository";
+import { NombaApi } from "@/services/nomba/nomba-api";
+
+const nombaApi = new NombaApi();
 
 export const businessRoutes = Router();
 
@@ -20,5 +23,14 @@ businessRoutes.get(
       return;
     }
     res.json({ success: true, data: business });
+  }),
+);
+
+businessRoutes.get(
+  "/balance",
+  requireScope("business.read"),
+  asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const balance = await nombaApi.getParentAccountBalance();
+    res.json({ success: true, data: balance ?? { balance: 0, currency: "NGN" } });
   }),
 );
