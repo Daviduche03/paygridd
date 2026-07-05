@@ -28,7 +28,6 @@ import { Icons } from "ui/icons";
 import { useToast } from "ui/use-toast";
 import { useOpenPanel } from "@openpanel/nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { useFileUrl } from "@/hooks/use-file-url";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useUserQuery } from "@/hooks/use-user";
@@ -58,18 +57,7 @@ export function InvoiceActions({
   const queryClient = useQueryClient();
   const { setParams } = useInvoiceParams();
   const { data: user } = useUserQuery();
-  const [cancelSeriesOpen, setCancelSeriesOpen] = useState(false);
-  const [refundOpen, setRefundOpen] = useState(false);
 
-  const canCancelSeries =
-    invoiceRecurringId &&
-    (recurringStatus === "active" || recurringStatus === "paused");
-  const canPauseSeries = invoiceRecurringId && recurringStatus === "active";
-  const canResumeSeries = invoiceRecurringId && recurringStatus === "paused";
-  const canEditSeries =
-    invoiceRecurringId &&
-    (recurringStatus === "active" || recurringStatus === "paused");
-  const canRefund = status === "paid" && paymentIntentId;
   const canDownloadReceipt = status === "paid";
 
   const { url: receiptUrl } = useFileUrl(
@@ -144,89 +132,6 @@ export function InvoiceActions({
     }),
   );
 
-  const cancelSeriesMutation = useMutation(
-    trpc.invoiceRecurring.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.getById.queryKey(),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.infiniteQueryKey(),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceRecurring.list.queryKey(),
-        });
-      },
-    }),
-  );
-
-  const refundMutation = useMutation(
-    trpc.invoicePayments.refundPayment.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.getById.queryKey({ id }),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.infiniteQueryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.invoiceSummary.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.paymentStatus.queryKey(),
-        });
-      },
-    }),
-  );
-
-  const pauseSeriesMutation = useMutation(
-    trpc.invoiceRecurring.pause.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.getById.queryKey(),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.infiniteQueryKey(),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceRecurring.list.queryKey(),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceRecurring.getUpcoming.queryKey(),
-        });
-      },
-    }),
-  );
-
-  const resumeSeriesMutation = useMutation(
-    trpc.invoiceRecurring.resume.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.getById.queryKey(),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.infiniteQueryKey(),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceRecurring.list.queryKey(),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceRecurring.getUpcoming.queryKey(),
-        });
-      },
-    }),
-  );
 
   const handleDeleteInvoice = () => {
     track(LogEvents.InvoiceDeleted.name);
@@ -234,53 +139,6 @@ export function InvoiceActions({
     setParams(null);
   };
 
-  const cancelSeriesDialog = (
-    <AlertDialog open={cancelSeriesOpen} onOpenChange={setCancelSeriesOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Cancel recurring series</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will stop all future invoices in this recurring series.
-            Invoices that have already been sent will not be affected.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Keep series</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() => {
-              if (invoiceRecurringId) {
-                cancelSeriesMutation.mutate({ id: invoiceRecurringId });
-              }
-            }}
-          >
-            Cancel series
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-
-  const refundDialog = (
-    <AlertDialog open={refundOpen} onOpenChange={setRefundOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Refund payment</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will issue a full refund for this invoice. The invoice status
-            will be changed to refunded. This action cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() => refundMutation.mutate({ invoiceId: id })}
-          >
-            Refund
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
 
   switch (status) {
     case "canceled":
@@ -325,73 +183,15 @@ export function InvoiceActions({
                 >
                   Mark as unpaid
                 </DropdownMenuItem>
-                {canRefund && (
-                  <DropdownMenuItem onClick={() => setRefundOpen(true)}>
-                    Refund payment
-                  </DropdownMenuItem>
-                )}
                 <DropdownMenuItem
                   className="text-destructive"
                   onClick={handleDeleteInvoice}
                 >
                   Delete
                 </DropdownMenuItem>
-                {(canEditSeries ||
-                  canPauseSeries ||
-                  canResumeSeries ||
-                  canCancelSeries) && (
-                  <>
-                    <DropdownMenuSeparator />
-                    {canEditSeries && (
-                      <DropdownMenuItem
-                        onClick={() =>
-                          setParams({ editRecurringId: invoiceRecurringId })
-                        }
-                      >
-                        Edit series
-                      </DropdownMenuItem>
-                    )}
-                    {canPauseSeries && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          if (invoiceRecurringId) {
-                            pauseSeriesMutation.mutate({
-                              id: invoiceRecurringId,
-                            });
-                          }
-                        }}
-                      >
-                        Pause series
-                      </DropdownMenuItem>
-                    )}
-                    {canResumeSeries && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          if (invoiceRecurringId) {
-                            resumeSeriesMutation.mutate({
-                              id: invoiceRecurringId,
-                            });
-                          }
-                        }}
-                      >
-                        Resume series
-                      </DropdownMenuItem>
-                    )}
-                    {canCancelSeries && (
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => setCancelSeriesOpen(true)}
-                      >
-                        Cancel series
-                      </DropdownMenuItem>
-                    )}
-                  </>
-                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          {cancelSeriesDialog}
-          {refundDialog}
         </>
       );
 
@@ -502,61 +302,9 @@ export function InvoiceActions({
                 >
                   Cancel
                 </DropdownMenuItem>
-                {(canEditSeries ||
-                  canPauseSeries ||
-                  canResumeSeries ||
-                  canCancelSeries) && (
-                  <>
-                    <DropdownMenuSeparator />
-                    {canEditSeries && (
-                      <DropdownMenuItem
-                        onClick={() =>
-                          setParams({ editRecurringId: invoiceRecurringId })
-                        }
-                      >
-                        Edit series
-                      </DropdownMenuItem>
-                    )}
-                    {canPauseSeries && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          if (invoiceRecurringId) {
-                            pauseSeriesMutation.mutate({
-                              id: invoiceRecurringId,
-                            });
-                          }
-                        }}
-                      >
-                        Pause series
-                      </DropdownMenuItem>
-                    )}
-                    {canResumeSeries && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          if (invoiceRecurringId) {
-                            resumeSeriesMutation.mutate({
-                              id: invoiceRecurringId,
-                            });
-                          }
-                        }}
-                      >
-                        Resume series
-                      </DropdownMenuItem>
-                    )}
-                    {canCancelSeries && (
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => setCancelSeriesOpen(true)}
-                      >
-                        Cancel series
-                      </DropdownMenuItem>
-                    )}
-                  </>
-                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          {cancelSeriesDialog}
         </>
       );
     case "draft":
@@ -590,61 +338,9 @@ export function InvoiceActions({
                 >
                   Delete draft
                 </DropdownMenuItem>
-                {(canEditSeries ||
-                  canPauseSeries ||
-                  canResumeSeries ||
-                  canCancelSeries) && (
-                  <>
-                    <DropdownMenuSeparator />
-                    {canEditSeries && (
-                      <DropdownMenuItem
-                        onClick={() =>
-                          setParams({ editRecurringId: invoiceRecurringId })
-                        }
-                      >
-                        Edit series
-                      </DropdownMenuItem>
-                    )}
-                    {canPauseSeries && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          if (invoiceRecurringId) {
-                            pauseSeriesMutation.mutate({
-                              id: invoiceRecurringId,
-                            });
-                          }
-                        }}
-                      >
-                        Pause series
-                      </DropdownMenuItem>
-                    )}
-                    {canResumeSeries && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          if (invoiceRecurringId) {
-                            resumeSeriesMutation.mutate({
-                              id: invoiceRecurringId,
-                            });
-                          }
-                        }}
-                      >
-                        Resume series
-                      </DropdownMenuItem>
-                    )}
-                    {canCancelSeries && (
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => setCancelSeriesOpen(true)}
-                      >
-                        Cancel series
-                      </DropdownMenuItem>
-                    )}
-                  </>
-                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          {cancelSeriesDialog}
         </>
       );
     default:

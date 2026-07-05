@@ -60,7 +60,7 @@ export const authService = {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
 
-    const googleUser: GoogleUserInfo = await userInfoRes.json();
+    const googleUser: GoogleUserInfo = await userInfoRes.json() as GoogleUserInfo;
 
     if (!googleUser.email) {
       throw new Error("No email from Google");

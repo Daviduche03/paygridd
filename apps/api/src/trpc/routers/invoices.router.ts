@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { invoiceService } from "@/services/invoice.service";
-import { protectedProcedure, publicProcedure, stubMutation, stubQuery, t } from "@/trpc/init";
+import { protectedProcedure, publicProcedure, t } from "@/trpc/init";
 
 const statusSchema = z.enum([
   "draft",
@@ -39,11 +39,21 @@ const createInputSchema = z.object({
   scheduledAt: z.string().optional(),
 });
 
-const updateInputSchema = z
-  .object({
-    id: z.string().uuid(),
-  })
-  .passthrough();
+const updateInputSchema = z.object({
+  id: z.string().uuid(),
+  amount: z.number().positive().optional(),
+  currency: z.string().optional(),
+  status: statusSchema.optional(),
+  customerId: z.string().uuid().optional(),
+  virtualAccountId: z.string().uuid().optional(),
+  invoiceNumber: z.string().optional(),
+  issueDate: z.string().optional(),
+  dueDate: z.string().optional(),
+  paidAt: z.string().optional(),
+  lineItems: z.array(z.any()).optional(),
+  scheduledAt: z.string().optional(),
+  template: z.object({ currency: z.string().optional() }).optional(),
+});
 
 export const invoicesRouter = t.router({
   summary: protectedProcedure.query(async ({ ctx }) => {

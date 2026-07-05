@@ -1,56 +1,210 @@
 # Getting Started
 
-Learn how to set up and authenticate with the PayGrid API.
+This guide walks you through your first PayGrid integration end-to-end: sign up, generate an API key, create a customer, issue an invoice, and understand what happens when the customer pays.
 
-## Authentication
+---
 
-PayGrid uses OAuth2 client credentials for API authentication. You'll receive your credentials when you sign up.
+## 1. Prerequisites
+
+Before you start, you need a PayGrid account. Sign up at [paygrid.xyz](https://paygrid.xyz) and create a business profile.
+
+---
+
+## 2. Generate an API Key
+
+API keys authenticate every request to PayGrid. Generate one from the dashboard:
+
+1. Go to **Settings > Developer**.
+2. Click **Create API Key**.
+3. Give it a name (e.g. "Development") and leave scopes empty for full access.
+4. Click **Create** and **copy the key immediately** — it is displayed once and cannot be retrieved later.
+
+Keys begin with `pg_` followed by 64 hexadecimal characters:
+
+```
+pg_a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2
+```
+
+> **Never share your API key** or commit it to version control. Use environment variables in production.
+
+---
+
+## 3. Verify Your Connection
+
+Test your key by fetching your business profile:
 
 ```bash
-curl -X POST https://api.paygrid.xyz/v1/auth/token/issue \
+curl https://api.paygrid.xyz/api/v1/business \
+  -H "Authorization: Bearer pg_xxx"
+```
+
+A successful response looks like:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "biz-uuid",
+    "name": "Your Business Name",
+    "baseCurrency": "NGN",
+    "countryCode": "NG",
+    "createdAt": "2026-07-01T00:00:00.000Z"
+  }
+}
+```
+
+If you get a `401`, double-check that:
+- Your API key starts with `pg_`
+- The key hasn't been deleted from the dashboard
+- There are no extra spaces or newlines in the header
+
+---
+
+## 4. Create a Customer
+
+Every invoice needs a customer. Add one to your directory:
+
+```bash
+curl -X POST https://api.paygrid.xyz/api/v1/customers \
+  -H "Authorization: Bearer pg_xxx" \
   -H "Content-Type: application/json" \
   -d '{
-    "grant_type": "client_credentials",
-    "client_id": "YOUR_CLIENT_ID",
-    "client_secret": "YOUR_CLIENT_SECRET"
+    "name": "Acme Corp",
+    "email": "billing@acme.com",
+    "phone": "+2348012345678"
   }'
 ```
 
-The response includes an `access_token` (expires after 25 minutes) and a `refresh_token`.
+Response:
 
-## Base URLs
-
-| Environment | URL |
-|-------------|-----|
-| Production | `https://api.paygrid.xyz` |
-| Sandbox | `https://sandbox.paygrid.xyz` |
-
-## Webhook URL
-
-Configure your webhook endpoint:
-
-```
-POST https://your-app.com/webhooks/paygrid
+```json
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Acme Corp",
+    "email": "billing@acme.com",
+    "phone": "+2348012345678",
+    "createdAt": "2026-07-04T12:00:00.000Z"
+  }
+}
 ```
 
-## Headers
+Save the returned `id` — you'll use it in the next step.
 
-All API requests require the following header:
+---
 
-| Header | Value |
-|--------|-------|
-| `Authorization` | `Bearer YOUR_ACCESS_TOKEN` |
-| `Content-Type` | `application/json` |
+## 5. Issue an Invoice
 
-## Errors
+Create an invoice for the customer:
 
-The API uses conventional HTTP response codes:
+```bash
+curl -X POST https://api.paygrid.xyz/api/v1/invoices \
+  -H "Authorization: Bearer pg_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerId": "550e8400-e29b-41d4-a716-446655440000",
+    "invoiceNumber": "INV-001",
+    "amount": 150000.00,
+    "dueDate": "2026-08-04"
+  }'
+```
 
-| Code | Meaning |
-|------|---------|
-| 200 | Success |
-| 400 | Bad request |
-| 401 | Unauthorized |
-| 404 | Not found |
-| 429 | Rate limited |
-| 500 | Server error |
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "customerId": "550e8400-e29b-41d4-a716-446655440000",
+    "invoiceNumber": "INV-001",
+    "amount": "150000.00",
+    "currency": "NGN",
+    "status": "draft",
+    "paymentUrl": "https://paygrid.xyz/i/660e8400-e29b-41d4-a716-446655440001",
+    "dueDate": "2026-08-04T00:00:00.000Z",
+    "createdAt": "2026-07-04T12:00:00.000Z"
+  }
+}
+```
+
+The invoice is created in `draft` status. To make it payable, send it:
+
+```bash
+curl -X POST https://api.paygrid.xyz/api/v1/invoices/660e8400-e29b-41d4-a716-446655440001/send \
+  -H "Authorization: Bearer pg_xxx"
+```
+
+This transitions the invoice to `unpaid` and records the issue date.
+
+---
+
+## 6. Share the Payment Link
+
+Every invoice includes a `paymentUrl` — a page where your customer can view the invoice details and make payment via bank transfer.
+
+Share this link with your customer:
+
+```
+https://paygrid.xyz/i/660e8400-e29b-41d4-a716-446655440001
+```
+
+Your customer opens the link, sees the invoice amount and due date, and transfers the exact amount to the displayed virtual account number using their bank's mobile app, USSD, or internet banking.
+
+---
+
+## 7. What Happens Next
+
+When the customer completes the transfer, PayGrid automatically handles everything:
+
+1. **Payment arrives** — Nomba credits the virtual account and sends a webhook to PayGrid.
+2. **Transaction recorded** — PayGrid creates a transaction record with the sender's name, bank, and amount.
+3. **Invoice reconciled** — The transaction is matched to the invoice. Status updates to `paid`. The `paidAt` timestamp is recorded.
+4. **Webhook fired** — PayGrid sends a `payment.received` and `invoice.paid` event to your configured webhook endpoint.
+5. **You get notified** — Your server receives the signed webhook payload in real-time.
+
+All of this happens without any polling, manual matching, or intervention.
+
+---
+
+## 8. Configure Webhooks (Optional)
+
+To receive real-time notifications, set up a webhook endpoint:
+
+1. Go to **Settings > Developer**.
+2. Click **Add Endpoint**.
+3. Enter your server URL (e.g. `https://api.example.com/paygrid-events`).
+4. Select the events you want (e.g. `payment.received`, `invoice.paid`).
+5. Click **Create**.
+
+Copy the signing secret and use it to [verify incoming payloads](/docs/webhooks#signature-verification).
+
+---
+
+## 9. Next Steps
+
+- **API Reference** — Full endpoint documentation for all resources
+- **API Keys & Webhooks** — Managing scopes, secrets, and delivery history
+- **Virtual Accounts** — Provisioning DVAs and understanding auto-reconciliation
+- **Webhooks** — Signature verification, retry policy, and best practices
+
+---
+
+## Base URL
+
+| Environment | Base URL |
+|-------------|----------|
+| Production | `https://api.paygrid.xyz/api/v1` |
+| Dashboard | `https://paygrid.xyz` |
+
+---
+
+## Common Errors
+
+| Code | Meaning | What to do |
+|------|---------|------------|
+| `401` | Unauthorized | Check your API key is correct and active |
+| `403` | Forbidden | Your key doesn't have the required scope |
+| `404` | Not found | The resource ID is wrong or belongs to another business |
+| `429` | Too many requests | You're exceeding 60 requests per minute — slow down or batch requests |

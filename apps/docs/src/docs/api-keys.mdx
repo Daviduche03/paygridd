@@ -1,0 +1,198 @@
+# API Keys & Webhooks
+
+Manage integration credentials and event notifications from the PayGrid dashboard under **Settings > Developer**.
+
+---
+
+## API Keys
+
+API keys authenticate server-to-server requests to the PayGrid REST API. Each key belongs to a single business and can be restricted to specific permission scopes.
+
+### Creating a Key
+
+1. Navigate to **Settings > Developer**.
+2. Click **Create API Key**.
+3. Enter a memorable name (e.g. "Production API Key").
+4. Select the permission scopes the key should have (leave empty for full access).
+5. Click **Create**.
+
+The full key is displayed exactly once. Copy and store it securely — PayGrid does not store the raw key and cannot retrieve it later.
+
+**Key format:** Keys begin with `pg_` followed by 64 hexadecimal characters:
+
+```
+pg_a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2
+```
+
+### Scopes
+
+| Scope | Grants access to |
+|-------|-----------------|
+| `transactions.read` | `GET /api/v1/transactions`, `GET /api/v1/transactions/:id` |
+| `transactions.write` | *(reserved for future use)* |
+| `invoices.read` | `GET /api/v1/invoices`, `GET /api/v1/invoices/:id` |
+| `invoices.write` | `POST /api/v1/invoices`, `PUT /api/v1/invoices/:id`, `POST /.../cancel`, `POST /.../send` |
+| `customers.read` | `GET /api/v1/customers`, `GET /api/v1/customers/:id`, `GET /api/v1/virtual-accounts` |
+| `customers.write` | `POST /api/v1/customers`, `PUT /api/v1/customers/:id`, `POST /api/v1/virtual-accounts` |
+| `business.read` | `GET /api/v1/business` |
+| `business.write` | *(reserved for future use)* |
+| `webhook.read` | `GET /api/v1/webhooks`, `GET /api/v1/webhooks/:id` |
+| `webhook.write` | `POST /api/v1/webhooks`, `PUT /api/v1/webhooks/:id`, `DELETE /api/v1/webhooks/:id` |
+
+An empty scope list (`[]`) grants unrestricted access to all endpoints.
+
+### Editing a Key
+
+You can change a key's name, scopes, or toggle it active/inactive from the dashboard. Note that scope changes take effect immediately for the next request.
+
+### Deleting a Key
+
+Deleting a key is irreversible. All clients using that key will immediately lose access to the API.
+
+---
+
+## Webhooks
+
+Webhooks allow PayGrid to send real-time HTTP notifications to your server when events occur. Configure endpoints from the dashboard or programmatically via the API.
+
+### Creating an Endpoint
+
+1. Navigate to **Settings > Developer**.
+2. In the Webhooks section, click **Add Endpoint**.
+3. Enter the URL of your server endpoint (must be HTTPS).
+4. Optionally add a description.
+5. Select the event types you want to receive (leave empty for all events).
+6. Click **Create**.
+
+PayGrid immediately sends a signing secret. Copy and store it — you'll need it to verify incoming webhook payloads.
+
+### Supported Events
+
+| Event | Fires when |
+|-------|------------|
+| `payment.received` | A payment is credited to one of your virtual accounts |
+| `payment.reversed` | A previously posted payment is reversed |
+| `payment.failed` | A payment attempt fails |
+| `invoice.created` | A new invoice is generated |
+| `invoice.paid` | An invoice is fully paid |
+| `invoice.overdue` | An unpaid invoice passes its due date |
+| `reconciliation.completed` | An automatic reconciliation cycle finishes |
+| `customer.created` | A new customer record is added |
+| `account.provisioned` | A new virtual account is provisioned |
+| `account.suspended` | A virtual account is suspended |
+
+### Payload Format
+
+Every webhook POST includes a JSON body with the following envelope:
+
+```json
+{
+  "event": "payment.received",
+  "timestamp": "2026-07-04T12:00:00.000Z",
+  "data": {
+    "id": "uuid",
+    "amount": "50000.00",
+    "currency": "NGN",
+    ...
+  }
+}
+```
+
+The `data` object contains the full resource representation relevant to the event.
+
+### Signature Verification
+
+Every webhook request includes headers that allow you to verify the payload originated from PayGrid.
+
+**Headers**
+
+| Header | Description |
+|--------|-------------|
+| `paygrid-signature` | HMAC-SHA256 hex digest of the raw JSON body |
+| `paygrid-timestamp` | Unix timestamp (seconds) when the event was generated |
+
+**Verifying in Node.js**
+
+```javascript
+import crypto from "node:crypto";
+
+function verifyWebhook(body, signature, secret) {
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(body)
+    .digest("hex");
+  return crypto.timingSafeEqual(
+    Buffer.from(expected),
+    Buffer.from(signature),
+  );
+}
+
+// Usage in an Express webhook handler:
+app.post("/webhooks/paygrid", (req, res) => {
+  const rawBody = JSON.stringify(req.body);
+  const signature = req.headers["paygrid-signature"];
+  const secret = "your_signing_secret";
+
+  if (!verifyWebhook(rawBody, signature, secret)) {
+    return res.status(401).send("Invalid signature");
+  }
+
+  // Process the event...
+  res.status(200).send("OK");
+});
+```
+
+**Verifying in Python**
+
+```python
+import hmac
+import hashlib
+
+def verify_webhook(body: bytes, signature: str, secret: str) -> bool:
+    expected = hmac.new(
+        secret.encode(),
+        body,
+        hashlib.sha256,
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)
+```
+
+### Retry Policy
+
+Failed deliveries are retried up to **5 times** with exponential backoff:
+
+| Attempt | Delay |
+|---------|-------|
+| 1 | Immediate failure |
+| 2 | 1 minute |
+| 3 | 5 minutes |
+| 4 | 15 minutes |
+| 5 | 1 hour |
+| Final | 4 hours |
+
+**When a delivery is considered failed:**
+- Server returns an HTTP 5xx status code
+- Server is unreachable (DNS failure, connection timeout)
+- Request times out after 10 seconds
+
+**Non-retryable failures:**
+- Server returns HTTP 4xx — the endpoint is considered misconfigured
+- Payload exceeds 256 KB
+
+### Delivery History
+
+From the dashboard, click any webhook endpoint to view its delivery history. Each entry shows:
+
+- Delivery status (`pending`, `delivered`, `failed`, `retrying`)
+- HTTP response code and body
+- Number of attempts (e.g. `3/5`)
+- Timestamp of each attempt
+- Next scheduled retry (for retrying deliveries)
+
+### Best Practices
+
+1. **Respond quickly.** Your endpoint should return `200 OK` within 10 seconds. Process events asynchronously.
+2. **Idempotency.** Events may be delivered more than once. Use the event `id` or `timestamp` to deduplicate.
+3. **Verify signatures.** Always verify the HMAC signature before processing a payload.
+4. **Use HTTPS only.** PayGrid will only send webhooks to HTTPS URLs.
+5. **Rotate secrets.** If a signing secret is compromised, delete the webhook endpoint and recreate it.

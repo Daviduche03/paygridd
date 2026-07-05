@@ -17,7 +17,6 @@ import { useOnboardingTracking } from "@/hooks/use-onboarding-tracking";
 import { OnboardingUserMenu } from "./onboarding-user-menu";
 import { ConnectBankNigeriaStep } from "./steps/connect-bank-nigeria-step";
 import { CreateBusinessStep } from "./steps/create-business-step";
-import { ReconciliationStep } from "./steps/reconciliation-step";
 import { SetNameStep } from "./steps/set-name-step";
 
 type StepConfig = {
@@ -220,14 +219,6 @@ export function OnboardingPage({
         ),
         overlay: true,
         navigation: "skip" as const,
-        canGoBack: true,
-        trackEvent: LogEvents.OnboardingStepCompleted,
-      },
-      {
-        key: "reconciliation",
-        animation: <BulkReconciliationAnimation />,
-        content: <ReconciliationStep />,
-        navigation: "next",
         canGoBack: true,
         trackEvent: LogEvents.OnboardingStepCompleted,
       },

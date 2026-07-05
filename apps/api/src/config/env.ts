@@ -12,7 +12,7 @@ const envSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string(),
   GOOGLE_REDIRECT_URI: z.string().url().default("http://localhost:3003/auth/google/callback"),
 
-  JWT_SECRET: z.string().default("super-secret-jwt-key-change-me"),
+  JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
 
   ALLOWED_ORIGINS: z.string().default("http://localhost:5173"),
   FRONTEND_URL: z.string().url().default("http://localhost:5173"),
@@ -22,6 +22,12 @@ const envSchema = z.object({
   NOMBA_ACCOUNT_ID: z.string().optional().default(""),
   NOMBA_SANDBOX: z.string().optional().default("true"),
   NOMBA_WEBHOOK_SECRET: z.string().optional().default(""),
+
+  FROM_EMAIL: z.string().optional().default(""),
+  SMTP_HOST: z.string().optional().default(""),
+  SMTP_PORT: z.coerce.number().optional().default(587),
+  SMTP_USER: z.string().optional().default(""),
+  SMTP_PASS: z.string().optional().default(""),
 });
 
 function loadEnv() {

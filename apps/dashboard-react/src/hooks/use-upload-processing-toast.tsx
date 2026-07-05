@@ -3,7 +3,6 @@
 import { toast } from "ui/use-toast";
 import NumberFlow from "@number-flow/react";
 import { useCallback, useEffect, useRef } from "react";
-import { PROCESSING_TOAST_ID } from "@/components/transactions-upload-zone";
 import { useMatchSound } from "@/hooks/use-match-sound";
 import { useRealtime } from "@/hooks/use-realtime";
 import { usePendingUploadsStore } from "@/store/pending-uploads";
@@ -25,6 +24,8 @@ type UseUploadProcessingToastOptions = {
  * - Finalizes with success message when all items complete
  * - Falls back to completion after 30s timeout
  */
+const PROCESSING_TOAST_ID = "upload-processing-toast";
+
 export function useUploadProcessingToast({
   businessId,
   onStatusChange,

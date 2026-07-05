@@ -1,24 +1,42 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { overviewService } from "@/services/overview.service";
 import { nombaService } from "@/services/nomba/service";
 import { businessService } from "@/services/business.service";
+import { membersService } from "@/services/members.service";
 import { userRepository } from "@/repositories/user.repository";
+import { membershipRepository } from "@/repositories/membership.repository";
+import { inviteRepository } from "@/repositories/invite.repository";
 import {
   protectedProcedure,
   publicProcedure,
-  stubList,
-  stubMutation,
-  stubQuery,
+  roleProtectedProcedure,
   t,
 } from "@/trpc/init";
 
+const businessRoleSchema = z.enum(["owner", "admin", "member"]);
+
 export const businessRouter = t.router({
-  list: protectedProcedure.query(async () => businessService.getAllBusinesses()),
+  list: protectedProcedure.query(async ({ ctx }) => {
+    let businessIds = await membershipRepository.findUserBusinessIds(ctx.user.id);
+    if (businessIds.length === 0) {
+      const user = await userRepository.findById(ctx.user.id);
+      if (user?.businessId) {
+        businessIds = [user.businessId];
+      }
+    }
+    const businesses = await Promise.all(
+      businessIds.map((id) => businessService.getBusinessById(id)),
+    );
+    return businesses.filter(Boolean);
+  }),
+
   current: protectedProcedure.query(async ({ ctx }) => {
     const user = await userRepository.findById(ctx.user.id);
     if (!user?.businessId) return null;
     return businessService.getBusinessById(user.businessId);
   }),
+
   create: protectedProcedure
     .input(
       z.object({
@@ -33,36 +51,129 @@ export const businessRouter = t.router({
     .mutation(async ({ ctx, input }) =>
       businessService.createBusiness({ ...input, userId: ctx.user.id }),
     ),
+
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .query(async ({ input }) => businessService.getBusinessById(input.id)),
+    .query(async ({ ctx, input }) => {
+      const membership = await membershipRepository.findOne(ctx.user.id, input.id);
+      if (!membership) throw new TRPCError({ code: "NOT_FOUND", message: "Business not found" });
+      return businessService.getBusinessById(input.id);
+    }),
+
   update: protectedProcedure
     .input(z.object({ id: z.string().optional(), name: z.string().optional() }))
     .mutation(async () => ({ success: true })),
-  members: stubList(),
+
+  members: roleProtectedProcedure().query(async ({ ctx }) => {
+    return membersService.getMembers(ctx.businessId!);
+  }),
+
   connectionStatus: protectedProcedure.query(async () => ({
     bankConnections: [],
     inboxAccounts: [],
   })),
-  acceptInvite: stubMutation(z.object({ inviteId: z.string() })),
-  declineInvite: stubMutation(z.object({ inviteId: z.string() })),
-  delete: protectedProcedure
+
+  acceptInvite: protectedProcedure
+    .input(z.object({ inviteId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return membersService.acceptInvite(input.inviteId, ctx.user.id);
+    }),
+
+  declineInvite: protectedProcedure
+    .input(z.object({ inviteId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const invite = await inviteRepository.findById(input.inviteId);
+      if (!invite) throw new TRPCError({ code: "NOT_FOUND", message: "Invite not found" });
+      const user = await userRepository.findById(ctx.user.id);
+      if (!user || user.email !== invite.email) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "This invite is not for you" });
+      }
+      return membersService.declineInvite(input.inviteId);
+    }),
+
+  delete: roleProtectedProcedure("owner")
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.businessId !== input.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "You can only delete your own business" });
+      }
       await businessService.deleteBusiness(input.id);
       return { success: true };
     }),
-  deleteInvite: stubMutation(z.object({ inviteId: z.string() })),
-  deleteMember: stubMutation(z.object({ memberId: z.string() })),
-  exportAllData: stubQuery(),
-  invite: stubMutation(z.object({ email: z.string() })),
-  invitesByEmail: stubList(),
-  leave: stubMutation(z.object({ businessId: z.string() })),
-  businessInvites: stubList(),
-  updateBaseCurrency: stubMutation(z.object({ currency: z.string() })),
-  updateMember: stubMutation(
-    z.object({ memberId: z.string(), role: z.string().optional() }),
-  ),
+
+  deleteInvite: roleProtectedProcedure("owner", "admin")
+    .input(z.object({ inviteId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const invite = await inviteRepository.findById(input.inviteId);
+      if (!invite || invite.businessId !== ctx.businessId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Invite not found" });
+      }
+      return membersService.deleteInvite(input.inviteId);
+    }),
+
+  deleteMember: roleProtectedProcedure("owner", "admin")
+    .input(z.object({ memberId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return membersService.removeMember(ctx.businessId!, input.memberId);
+    }),
+
+  invite: roleProtectedProcedure("owner", "admin")
+    .input(
+      z.array(
+        z.object({
+          email: z.string().email(),
+          role: businessRoleSchema,
+        }),
+      ),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return membersService.inviteMembers({
+        businessId: ctx.businessId!,
+        invites: input,
+        invitedByUserId: ctx.user.id,
+      });
+    }),
+
+  invitesByEmail: protectedProcedure.query(async ({ ctx }) => {
+    const user = await userRepository.findById(ctx.user.id);
+    if (!user?.email) return [];
+    return membersService.getUserInvites(user.email);
+  }),
+
+  leave: protectedProcedure
+    .input(z.object({ businessId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return membersService.leaveBusiness(ctx.user.id, input.businessId);
+    }),
+
+  businessInvites: roleProtectedProcedure("owner", "admin")
+    .query(async ({ ctx }) => {
+      return membersService.getBusinessInvites(ctx.businessId!);
+    }),
+
+  updateBaseCurrency: protectedProcedure
+    .input(z.object({ currency: z.string() }))
+    .mutation(async () => ({ success: true })),
+
+  updateMember: roleProtectedProcedure("owner", "admin")
+    .input(
+      z.object({
+        memberId: z.string(),
+        role: businessRoleSchema.optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (input.role) {
+        const members = await membershipRepository.findByBusiness(ctx.businessId!);
+        const target = members.find((m) => m.id === input.memberId);
+        if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "Member not found" });
+        if (input.role === "owner" && ctx.membershipRole !== "owner") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Only owners can promote to owner" });
+        }
+        return membersService.updateMemberRole(input.memberId, input.role);
+      }
+      return { success: true };
+    }),
 });
 
 export const banksRouter = t.router({

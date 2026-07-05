@@ -1,93 +1,749 @@
 # API Reference
 
+Base URL: `https://api.paygrid.xyz/api/v1`
+
+All endpoints require a valid API key sent via the `Authorization` header. Responses follow a uniform envelope:
+
+```json
+{
+  "success": true,
+  "data": { ... },
+  "meta": { "cursor": "...", "total": 100 }
+}
+```
+
+Errors return:
+
+```json
+{
+  "success": false,
+  "error": "Human-readable error message"
+}
+```
+
+---
+
 ## Authentication
 
-**Issue Token**
-
 ```bash
-POST /v1/auth/token/issue
+Authorization: Bearer pg_<your_api_key>
 ```
 
-Obtain an access token using client credentials.
+API keys are generated from the PayGrid dashboard under **Settings > Developer**. Each key can be scoped to a subset of resources. An empty scope list grants full access.
 
-**Refresh Token**
+### Scopes
+
+| Scope | Access |
+|-------|--------|
+| `customers.read` | List and view customers |
+| `customers.write` | Create and update customers |
+| `invoices.read` | List and view invoices |
+| `invoices.write` | Create, update, cancel, and send invoices |
+| `transactions.read` | List and view transactions |
+| `business.read` | View business profile |
+| `webhook.read` | List and view webhook endpoints |
+| `webhook.write` | Create, update, and delete webhook endpoints |
+
+### Rate Limiting
+
+- **60 requests per minute** per IP across all `/api/v1` endpoints
+- Exceeding the limit returns `429 Too Many Requests`
+
+---
+
+## Customers
+
+Manage your customer directory.
+
+### List Customers
 
 ```bash
-POST /v1/auth/token/refresh
+GET /api/v1/customers
 ```
 
-Refresh an expiring access token.
+**Query Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `cursor` | string | Pagination cursor from a previous response `meta.cursor` |
+| `pageSize` | integer | Results per page (default: 20, max: 100) |
+| `q` | string | Search query — matches name, email, or phone |
+| `sort` | string | Sort order: `name_asc`, `name_desc`, `created_at_asc`, `created_at_desc` |
+
+**Scope:** `customers.read`
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "name": "Acme Corp",
+      "email": "billing@acme.com",
+      "phone": "+2348012345678",
+      "billingEmail": "invoices@acme.com",
+      "country": "Nigeria",
+      "countryCode": "NG",
+      "createdAt": "2026-06-01T10:00:00.000Z",
+      "updatedAt": "2026-06-01T10:00:00.000Z"
+    }
+  ],
+  "meta": {
+    "cursor": "next_page_cursor",
+    "total": 42
+  }
+}
+```
+
+### Create Customer
+
+```bash
+POST /api/v1/customers
+```
+
+**Scope:** `customers.write`
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | **Yes** | Customer name |
+| `email` | string | No | Email address |
+| `phone` | string | No | Phone number |
+| `billingEmail` | string | No | Email for invoice delivery |
+| `country` | string | No | Country name |
+| `countryCode` | string | No | ISO 3166-1 alpha-2 country code |
+
+**Response** `201 Created`
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "name": "Acme Corp",
+    "email": "billing@acme.com",
+    "phone": null,
+    "billingEmail": null,
+    "country": null,
+    "countryCode": null,
+    "createdAt": "2026-07-04T12:00:00.000Z",
+    "updatedAt": "2026-07-04T12:00:00.000Z"
+  }
+}
+```
+
+### Get Customer
+
+```bash
+GET /api/v1/customers/:id
+```
+
+**Scope:** `customers.read`
+
+**Path Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `id` | uuid | Customer ID |
+
+**Response** — Same shape as a single customer object.
+
+### Update Customer
+
+```bash
+PUT /api/v1/customers/:id
+```
+
+**Scope:** `customers.write`
+
+**Path Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `id` | uuid | Customer ID |
+
+**Request Body** — All fields optional; omitted fields retain their existing values.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Customer name |
+| `email` | string | Email address |
+| `phone` | string | Phone number |
+| `billingEmail` | string | Email for invoice delivery |
+| `country` | string | Country name |
+| `countryCode` | string | ISO 3166-1 alpha-2 country code |
+
+**Response** — Returns the updated customer object.
+
+---
 
 ## Virtual Accounts
 
-**Create Virtual Account**
+Provisioned Dedicated Virtual Accounts (DVAs) that receive payments from customers.
+
+### List Virtual Accounts
 
 ```bash
-POST /v1/accounts/virtual
+GET /api/v1/virtual-accounts
 ```
 
-Creates a static virtual account for receiving payments.
+**Scope:** `customers.read`
 
-**Create for Sub-Account**
+**Query Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `cursor` | string | Pagination cursor |
+| `pageSize` | integer | Results per page |
+| `q` | string | Search by account name, number, or reference |
+| `status` | string | Filter by status: `active`, `suspended`, `closed`, `expired` |
+| `customerId` | uuid | Filter by linked customer |
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "customerId": "uuid or null",
+      "kind": "static",
+      "accountRef": "cust-ref-001",
+      "accountName": "Acme Corp - Payments",
+      "accountNumber": "9391076543",
+      "bankName": "Nombank MFB",
+      "currency": "NGN",
+      "status": "active",
+      "expectedAmount": "50000.00",
+      "createdAt": "2026-06-01T10:00:00.000Z",
+      "updatedAt": "2026-06-10T14:30:00.000Z"
+    }
+  ],
+  "meta": { "cursor": "...", "total": 15 }
+}
+```
+
+### Create Virtual Account
 
 ```bash
-POST /v1/accounts/virtual/{subAccountId}
+POST /api/v1/virtual-accounts
 ```
 
-Creates a virtual account linked to a sub-account.
+**Scope:** `customers.write`
 
-**Get Virtual Account**
+**Request Body**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `accountRef` | string | **Yes** | Unique reference for this account |
+| `accountName` | string | **Yes** | Account name displayed to customer |
+| `accountNumber` | string | **Yes** | NUBAN account number |
+| `customerId` | uuid | No | Link to a customer record |
+| `bankName` | string | No | Bank name |
+| `currency` | string | No | Currency (default: `NGN`) |
+| `nombaAccountHolderId` | string | No | Nomba account holder ID |
+| `expectedAmount` | number | No | Expected payment amount for this account |
+
+**Response** `201 Created` — Returns the created virtual account.
+
+### Get Virtual Account
 
 ```bash
-GET /v1/accounts/virtual/{identifier}
+GET /api/v1/virtual-accounts/:id
 ```
 
-Retrieve details by account number or reference.
+**Scope:** `customers.read`
 
-**List Virtual Accounts**
+**Path Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `id` | uuid | Virtual account ID |
+
+**Response** — Single virtual account object.
+
+---
+
+## Invoices
+
+Create, send, and manage invoices.
+
+### Invoice Statuses
+
+| Status | Description |
+|--------|-------------|
+| `draft` | Invoice being edited; not yet visible to customer |
+| `scheduled` | Will be sent on a future date |
+| `unpaid` | Sent to customer; awaiting payment |
+| `overdue` | Past due date without payment |
+| `paid` | Fully paid |
+| `canceled` | Voided before or after sending |
+| `refunded` | Payment returned to customer |
+
+### List Invoices
 
 ```bash
-GET /v1/accounts/virtual/list
+GET /api/v1/invoices
 ```
 
-List virtual accounts with optional filters.
+**Scope:** `invoices.read`
 
-**Update Virtual Account**
+**Query Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `cursor` | string | Pagination cursor |
+| `pageSize` | integer | Results per page |
+| `q` | string | Search by invoice number or customer name |
+| `statuses` | string | Comma-separated list of statuses to filter |
+| `customerIds` | string | Comma-separated list of customer UUIDs |
+| `dueFilter` | string | `overdue` to show only past-due invoices |
+| `sort` | string | Sort order: `issue_date_asc`, `issue_date_desc`, `due_date_asc`, `due_date_desc`, `amount_asc`, `amount_desc`, `created_at_asc`, `created_at_desc` |
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "customerId": "uuid or null",
+      "virtualAccountId": "uuid or null",
+      "invoiceNumber": "INV-001",
+      "amount": "150000.00",
+      "amountPaid": "0.00",
+      "currency": "NGN",
+      "status": "unpaid",
+      "issueDate": "2026-06-15T00:00:00.000Z",
+      "dueDate": "2026-07-15T00:00:00.000Z",
+      "paidAt": null,
+      "lineItems": [
+        { "description": "Consulting services", "quantity": 1, "unitPrice": 150000 }
+      ],
+      "paymentUrl": "https://paygrid.xyz/i/uuid",
+      "createdAt": "2026-06-15T10:00:00.000Z",
+      "updatedAt": "2026-06-15T10:00:00.000Z"
+    }
+  ],
+  "meta": { "cursor": "...", "total": 30 }
+}
+```
+
+### Create Invoice
 
 ```bash
-PATCH /v1/accounts/virtual/{identifier}
+POST /api/v1/invoices
 ```
 
-Update account name, callback URL, or expected amount.
+**Scope:** `invoices.write`
 
-**Expire Virtual Account**
+**Request Body**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `invoiceNumber` | string | **Yes** | Unique invoice number |
+| `amount` | number | **Yes** | Invoice amount |
+| `customerId` | uuid | No | Link to a customer |
+| `virtualAccountId` | uuid | No | Link to a virtual account |
+| `currency` | string | No | Currency (default: `NGN`) |
+| `status` | string | No | Initial status (default: `draft`) |
+| `issueDate` | string | No | ISO 8601 date |
+| `dueDate` | string | No | ISO 8601 date |
+| `lineItems` | array | No | Array of line item objects |
+
+**Notes:**
+- If `customerId` is provided, it must belong to your business.
+- If `virtualAccountId` is provided, it must belong to your business.
+- `amount` defaults to the sum of `lineItems` if not explicitly provided.
+
+**Response** `201 Created`
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "invoiceNumber": "INV-001",
+    "amount": "150000.00",
+    "currency": "NGN",
+    "status": "draft",
+    "paymentUrl": "https://paygrid.xyz/i/uuid",
+    ...
+  }
+}
+```
+
+### Get Invoice
 
 ```bash
-DELETE /v1/accounts/virtual/{identifier}
+GET /api/v1/invoices/:id
 ```
 
-Expire a virtual account.
+**Scope:** `invoices.read`
+
+**Path Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `id` | uuid | Invoice ID |
+
+**Response** — Single invoice object with `paymentUrl`.
+
+### Update Invoice
+
+```bash
+PUT /api/v1/invoices/:id
+```
+
+**Scope:** `invoices.write`
+
+**Path Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `id` | uuid | Invoice ID |
+
+**Request Body** — All fields optional.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `amount` | number | Invoice amount |
+| `currency` | string | Currency code |
+| `customerId` | uuid | Customer UUID |
+| `virtualAccountId` | uuid | Virtual account UUID |
+| `issueDate` | string | ISO 8601 date |
+| `dueDate` | string | ISO 8601 date |
+| `lineItems` | array | Line items |
+
+**Note:** The `status` field cannot be set to `paid` via this endpoint. Use the payment flow (customer pays via the payment URL) to mark invoices as paid.
+
+### Cancel Invoice
+
+```bash
+POST /api/v1/invoices/:id/cancel
+```
+
+**Scope:** `invoices.write`
+
+**Path Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `id` | uuid | Invoice ID |
+
+**Constraints:**
+- Cannot cancel an invoice with status `paid`, `canceled`, or `refunded`.
+
+**Response** — Returns the updated invoice with status `canceled`.
+
+### Send Invoice
+
+```bash
+POST /api/v1/invoices/:id/send
+```
+
+**Scope:** `invoices.write`
+
+**Path Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `id` | uuid | Invoice ID |
+
+**Constraints:**
+- Only `draft` invoices can be sent.
+- Sending transitions the invoice to `unpaid` and sets `issueDate` to the current date.
+
+**Response** — Returns the updated invoice with status `unpaid`.
+
+---
 
 ## Transactions
 
-**List Parent Account Transactions**
+Incoming payments and financial events recorded against your business.
+
+### Transaction Statuses
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Payment initiated, awaiting confirmation |
+| `posted` | Payment confirmed and posted |
+| `failed` | Payment attempt failed |
+| `reversed` | Payment reversed to sender |
+
+### Reconciliation Statuses
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Awaiting reconciliation |
+| `matched` | Successfully matched to an invoice |
+| `underpaid` | Amount received is less than the invoice amount |
+| `overpaid` | Amount received exceeds the invoice amount |
+| `duplicate` | Duplicate payment detected |
+| `needs_review` | Requires manual review |
+
+### List Transactions
 
 ```bash
-GET /v1/transactions/account
+GET /api/v1/transactions
 ```
 
-**List Virtual Account Transactions**
+**Scope:** `transactions.read`
+
+**Query Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `cursor` | string | Pagination cursor |
+| `pageSize` | integer | Results per page |
+| `q` | string | Search by sender name, narration, or reference |
+| `status` | string | Filter by status: `pending`, `posted`, `failed`, `reversed` |
+| `type` | string | Filter by type: `credit`, `debit` |
+| `customerId` | uuid | Filter by customer |
+| `virtualAccountId` | uuid | Filter by virtual account |
+| `reconciliationStatus` | string | Filter by reconciliation status |
+| `dateFrom` | string | Include transactions on or after this ISO 8601 date |
+| `amountMin` | number | Minimum amount (inclusive) |
+| `amountMax` | number | Maximum amount (inclusive) |
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "virtualAccountId": "uuid or null",
+      "customerId": "uuid or null",
+      "invoiceId": "uuid or null",
+      "nombaTransactionId": "NMB-123456",
+      "type": "credit",
+      "amount": "50000.00",
+      "currency": "NGN",
+      "status": "posted",
+      "reconciliationStatus": "matched",
+      "senderName": "John Doe",
+      "senderBank": "GTBank",
+      "narration": "Payment for INV-001",
+      "occurredAt": "2026-07-04T10:30:00.000Z",
+      "createdAt": "2026-07-04T10:30:00.000Z"
+    }
+  ],
+  "meta": { "cursor": "...", "total": 200 }
+}
+```
+
+### Get Transaction
 
 ```bash
-GET /v1/accounts/virtual/{identifier}/transactions
+GET /api/v1/transactions/:id
 ```
 
-## Transfers
+**Scope:** `transactions.read`
 
-**Bank Transfer**
+**Path Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `id` | uuid | Transaction ID |
+
+**Response** — Single transaction object.
+
+---
+
+## Business
+
+View your business profile.
+
+### Get Business
 
 ```bash
-POST /v1/transfers/bank
+GET /api/v1/business
 ```
 
-Transfer funds to a bank account.
+**Scope:** `business.read`
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "name": "Acme Corp Ltd",
+    "baseCurrency": "NGN",
+    "countryCode": "NG",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-06-15T12:00:00.000Z"
+  }
+}
+```
+
+---
+
+## Webhooks (API)
+
+Manage webhook endpoints programmatically. See the [Webhooks](/docs/webhooks) page for details on event types, signature verification, and retry behaviour.
+
+### List Webhooks
+
+```bash
+GET /api/v1/webhooks
+```
+
+**Scope:** `webhook.read`
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "url": "https://api.example.com/paygrid-events",
+      "description": "Payment notifications",
+      "events": ["payment.received", "invoice.paid"],
+      "active": true,
+      "createdAt": "2026-06-01T10:00:00.000Z",
+      "updatedAt": "2026-06-10T14:30:00.000Z"
+    }
+  ]
+}
+```
+
+### Create Webhook
+
+```bash
+POST /api/v1/webhooks
+```
+
+**Scope:** `webhook.write`
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `url` | string | **Yes** | HTTPS endpoint that receives POST requests |
+| `description` | string | No | Human-readable label |
+| `events` | string[] | No | Array of event types to subscribe to (empty = all events) |
+
+**Response** `201 Created` — Includes the `signingSecret` for signature verification (shown only once).
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "url": "https://api.example.com/paygrid-events",
+    "description": "Payment notifications",
+    "events": ["payment.received", "invoice.paid"],
+    "active": true,
+    "signingSecret": "aabbccddee...",
+    "createdAt": "2026-07-04T12:00:00.000Z",
+    "updatedAt": "2026-07-04T12:00:00.000Z"
+  }
+}
+```
+
+### Get Webhook
+
+```bash
+GET /api/v1/webhooks/:id
+```
+
+**Scope:** `webhook.read`
+
+**Path Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `id` | uuid | Webhook ID |
+
+**Response** — Single webhook object (without the `signingSecret`).
+
+### Update Webhook
+
+```bash
+PUT /api/v1/webhooks/:id
+```
+
+**Scope:** `webhook.write`
+
+**Path Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `id` | uuid | Webhook ID |
+
+**Request Body** — All fields optional.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `url` | string | HTTPS endpoint URL |
+| `description` | string | Human-readable label |
+| `events` | string[] | Subscribed event types |
+| `active` | boolean | Enable or disable the endpoint |
+
+### Delete Webhook
+
+```bash
+DELETE /api/v1/webhooks/:id
+```
+
+**Scope:** `webhook.write`
+
+**Path Parameters**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `id` | uuid | Webhook ID |
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": { "id": "uuid" }
+}
+```
+
+---
+
+## Pagination
+
+All list endpoints support cursor-based pagination. The response `meta` object contains a `cursor` field. Pass this value as the `cursor` query parameter in the next request to fetch the next page. When `cursor` is absent from the response, you have reached the last page.
+
+```bash
+GET /api/v1/customers?pageSize=50&cursor=eyJpZCI6IjEyMzQ1Njc4OTAi...
+```
+
+---
+
+## Error Codes
+
+| HTTP Code | Meaning |
+|-----------|---------|
+| `200` | Success |
+| `201` | Created |
+| `400` | Bad request — invalid input or business validation failure |
+| `401` | Unauthorized — missing or invalid API key |
+| `403` | Forbidden — API key lacks the required scope |
+| `404` | Not found — resource does not exist |
+| `429` | Too many requests — rate limit exceeded |
+| `500` | Internal server error |
+
+All errors return:
+
+```json
+{
+  "success": false,
+  "error": "Human-readable description of the problem"
+}
+```

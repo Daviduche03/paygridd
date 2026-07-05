@@ -1,0 +1,85 @@
+# Customers
+
+The customer directory stores the individuals and businesses you invoice. Each customer can be linked to multiple invoices and virtual accounts.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/customers` | List customers |
+| `POST` | `/api/v1/customers` | Create a customer |
+| `GET` | `/api/v1/customers/:id` | Get a single customer |
+| `PUT` | `/api/v1/customers/:id` | Update a customer |
+
+See the [API Reference](/docs/api-reference#customers) for full request/response schemas.
+
+## Create a Customer
+
+```bash
+curl -X POST https://api.paygrid.xyz/api/v1/customers \
+  -H "Authorization: Bearer pg_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Acme Corp",
+    "email": "billing@acme.com",
+    "phone": "+2348012345678",
+    "billingEmail": "invoices@acme.com",
+    "country": "Nigeria",
+    "countryCode": "NG"
+  }'
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Acme Corp",
+    "email": "billing@acme.com",
+    "phone": "+2348012345678",
+    "billingEmail": "invoices@acme.com",
+    "country": "Nigeria",
+    "countryCode": "NG",
+    "createdAt": "2026-07-04T12:00:00.000Z",
+    "updatedAt": "2026-07-04T12:00:00.000Z"
+  }
+}
+```
+
+## Search Customers
+
+Search by name, email, or phone:
+
+```bash
+curl "https://api.paygrid.xyz/api/v1/customers?q=Acme" \
+  -H "Authorization: Bearer pg_xxx"
+```
+
+Results are sorted by name or creation date via the `sort` parameter:
+
+```bash
+curl "https://api.paygrid.xyz/api/v1/customers?sort=name_asc" \
+  -H "Authorization: Bearer pg_xxx"
+```
+
+| Sort value | Order |
+|------------|-------|
+| `name_asc` | Name A→Z |
+| `name_desc` | Name Z→A |
+| `created_at_asc` | Oldest first |
+| `created_at_desc` | Newest first |
+
+## Update a Customer
+
+All fields are optional on update — omitted fields retain their existing values.
+
+```bash
+curl -X PUT https://api.paygrid.xyz/api/v1/customers/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer pg_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "new-billing@acme.com"}'
+```
+
+## Scope
+
+These endpoints require the `customers.read` (list/get) or `customers.write` (create/update) scope on your API key.

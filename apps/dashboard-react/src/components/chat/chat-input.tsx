@@ -10,7 +10,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import Image from "@/next/image";
 import { useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ConnectorsModal } from "@/components/modals/connectors-modal";
 import type { ConnectedApp } from "./chat-context";
 
 const MCP_CLIENTS = [] as const;
@@ -264,7 +263,6 @@ export function ChatInput({
   const [showAppsPanel, setShowAppsPanel] = useState(false);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
-  const [connectorsModalOpen, setConnectorsModalOpen] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [, setSearchParams] = useSearchParams();
   const setMcpAppParam = (value: string | null) => {
@@ -823,10 +821,6 @@ export function ChatInput({
         </button>
       </div>
 
-      <ConnectorsModal
-        open={connectorsModalOpen}
-        onOpenChange={setConnectorsModalOpen}
-      />
     </div>
   );
 }

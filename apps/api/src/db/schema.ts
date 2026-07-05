@@ -270,6 +270,35 @@ export const transactions = pgTable(
   ],
 );
 
+export const deliveryStatusEnum = pgEnum("delivery_status", [
+  "pending",
+  "delivered",
+  "failed",
+  "retrying",
+]);
+
+export const webhooks = pgTable(
+  "webhooks",
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    url: text().notNull(),
+    description: text().default("").notNull(),
+    events: text("events").array().notNull().default([]),
+    active: boolean().default(true).notNull(),
+    signingSecret: text("signing_secret").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [index("webhooks_business_id_idx").on(table.businessId)],
+);
+
 export const webhookEvents = pgTable(
   "webhook_events",
   {
@@ -290,6 +319,38 @@ export const webhookEvents = pgTable(
   (table) => [uniqueIndex("webhook_events_request_id_idx").on(table.requestId)],
 );
 
+export const webhookDeliveries = pgTable(
+  "webhook_deliveries",
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    webhookId: uuid("webhook_id")
+      .notNull()
+      .references(() => webhooks.id, { onDelete: "cascade" }),
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    eventType: text("event_type").notNull(),
+    payload: jsonb("payload").notNull(),
+    status: deliveryStatusEnum().default("pending").notNull(),
+    responseCode: integer("response_code"),
+    responseBody: text("response_body"),
+    attempts: integer().default(0).notNull(),
+    maxAttempts: integer("max_attempts").default(5).notNull(),
+    nextRetryAt: timestamp("next_retry_at", { withTimezone: true, mode: "string" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("webhook_deliveries_webhook_id_idx").on(table.webhookId),
+    index("webhook_deliveries_business_id_idx").on(table.businessId),
+    index("webhook_deliveries_status_idx").on(table.status),
+  ],
+);
+
 export const invoiceNumberSequences = pgTable(
   "invoice_number_sequences",
   {
@@ -300,14 +361,86 @@ export const invoiceNumberSequences = pgTable(
   (table) => [primaryKey({ columns: [table.businessId, table.year] })],
 );
 
+export const inviteStatusEnum = pgEnum("invite_status", ["pending", "accepted", "declined", "expired"]);
+
+export const businessInvites = pgTable(
+  "business_invites",
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    email: text().notNull(),
+    role: businessRoleEnum().default("member").notNull(),
+    status: inviteStatusEnum().default("pending").notNull(),
+    invitedBy: uuid("invited_by").references(() => users.id),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("business_invites_business_id_idx").on(table.businessId),
+    uniqueIndex("business_invites_business_email_idx").on(table.businessId, table.email),
+  ],
+);
+
+export const apiKeyScopeEnum = pgEnum("api_key_scope", [
+  "transactions.read",
+  "transactions.write",
+  "invoices.read",
+  "invoices.write",
+  "customers.read",
+  "customers.write",
+  "business.read",
+  "business.write",
+  "webhook.read",
+  "webhook.write",
+]);
+
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    keyPrefix: text("key_prefix").notNull(),
+    keyHash: text("key_hash").notNull(),
+    scopes: text("scopes").array().notNull().default([]),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true, mode: "string" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }),
+    active: boolean().default(true).notNull(),
+    createdBy: uuid("created_by").references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("api_keys_business_id_idx").on(table.businessId),
+    index("api_keys_key_hash_idx").on(table.keyHash),
+  ],
+);
+
 export const businessesRelations = relations(businesses, ({ many, one }) => ({
   users: many(users),
   members: many(usersOnBusiness),
+  invites: many(businessInvites),
   customers: many(customers),
   virtualAccounts: many(virtualAccounts),
   invoices: many(invoices),
   transactions: many(transactions),
   kyc: one(businessKyc),
+  apiKeys: many(apiKeys),
+  webhooks: many(webhooks),
+  webhookDeliveries: many(webhookDeliveries),
 }));
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -361,6 +494,47 @@ export const businessKycRelations = relations(businessKyc, ({ one }) => ({
   business: one(businesses, {
     fields: [businessKyc.businessId],
     references: [businesses.id],
+  }),
+}));
+
+export const webhooksRelations = relations(webhooks, ({ one, many }) => ({
+  business: one(businesses, {
+    fields: [webhooks.businessId],
+    references: [businesses.id],
+  }),
+  deliveries: many(webhookDeliveries),
+}));
+
+export const webhookDeliveriesRelations = relations(webhookDeliveries, ({ one }) => ({
+  webhook: one(webhooks, {
+    fields: [webhookDeliveries.webhookId],
+    references: [webhooks.id],
+  }),
+  business: one(businesses, {
+    fields: [webhookDeliveries.businessId],
+    references: [businesses.id],
+  }),
+}));
+
+export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
+  business: one(businesses, {
+    fields: [apiKeys.businessId],
+    references: [businesses.id],
+  }),
+  creator: one(users, {
+    fields: [apiKeys.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const businessInvitesRelations = relations(businessInvites, ({ one }) => ({
+  business: one(businesses, {
+    fields: [businessInvites.businessId],
+    references: [businesses.id],
+  }),
+  inviter: one(users, {
+    fields: [businessInvites.invitedBy],
+    references: [users.id],
   }),
 }));
 

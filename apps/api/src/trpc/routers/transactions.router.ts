@@ -45,6 +45,10 @@ export const transactionsRouter = t.router({
     return transactionsService.summary(ctx.user.id);
   }),
 
+  reconciliationSummary: protectedProcedure.query(async ({ ctx }) => {
+    return transactionsService.reconciliationSummary(ctx.user.id);
+  }),
+
   list: protectedProcedure.input(listInputSchema).query(async ({ ctx, input }) => {
     if (input?.limit != null || input?.offset != null) {
       return transactionsService.listRecent({

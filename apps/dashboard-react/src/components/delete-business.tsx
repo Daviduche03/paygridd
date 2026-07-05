@@ -22,7 +22,7 @@ import {
 import { Input } from "ui/input";
 import { Label } from "ui/label";
 import { useMutation } from "@tanstack/react-query";
-import { AlertTriangle, ExternalLink, Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useUserQuery } from "@/hooks/use-user";
@@ -41,14 +41,6 @@ export function DeleteBusiness() {
       onSuccess: async () => {
         // Revalidate server state and redirect
         router.push("/businesses");
-      },
-    }),
-  );
-
-  const getPortalUrlMutation = useMutation(
-    trpc.billing.getPortalUrl.mutationOptions({
-      onSuccess: ({ url }) => {
-        window.open(url, "_blank");
       },
     }),
   );
@@ -97,19 +89,6 @@ export function DeleteBusiness() {
                             Cancel your subscription first to avoid further
                             charges.
                           </p>
-                          <button
-                            type="button"
-                            onClick={() => getPortalUrlMutation.mutate()}
-                            disabled={getPortalUrlMutation.isPending}
-                            className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-300 underline underline-offset-2 hover:text-amber-800 dark:hover:text-amber-200"
-                          >
-                            {getPortalUrlMutation.isPending ? (
-                              <Loader2 className="size-3 animate-spin" />
-                            ) : (
-                              <ExternalLink className="size-3" />
-                            )}
-                            Manage subscription
-                          </button>
                         </div>
                       </div>
                     </div>

@@ -43,6 +43,34 @@
       "when": 1782978096565,
       "tag": "0005_mysterious_adam_destine",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783172241310,
+      "tag": "0006_dashing_madame_masque",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1783176184177,
+      "tag": "0007_fuzzy_virginia_dare",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1783177847178,
+      "tag": "0008_empty_dexter_bennett",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1783179013239,
+      "tag": "0009_unusual_purple_man",
+      "breakpoints": true
     }
   ]
 }

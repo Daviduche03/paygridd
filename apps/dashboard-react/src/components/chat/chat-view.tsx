@@ -2,7 +2,6 @@
 
 import { LogEvents } from "eventbus/events";
 import { useOpenPanel } from "@openpanel/nextjs";
-import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import type React from "react";
 import { useCallback, useEffect } from "react";
@@ -19,7 +18,6 @@ import {
 import { filesToUIParts } from "@/components/chat/file-utils";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useInvoiceEditorStore } from "@/store/invoice-editor";
-import { useTRPC } from "@/trpc/client";
 
 export function InputBar({
   isActive,
@@ -91,13 +89,6 @@ export function ChatView({ header }: { header?: React.ReactNode }) {
     clearMentionedApps,
   } = useChatState();
   const { track } = useOpenPanel();
-
-  const trpc = useTRPC();
-  const { data: connectedApps } = useQuery(
-    trpc.connectors.connections.queryOptions(undefined, {
-      staleTime: 5 * 60 * 1000,
-    }),
-  );
 
   const { canvas, setParams: setInvoiceParams } = useInvoiceParams();
   const isCanvasOpen = canvas === true;
@@ -208,7 +199,6 @@ export function ChatView({ header }: { header?: React.ReactNode }) {
             onSubmit={handleSubmit}
             onStop={stop}
             menuPosition="above"
-            connectedApps={connectedApps}
             mentionedApps={mentionedApps}
             onMentionApp={addMentionedApp}
             onRemoveMention={removeMentionedApp}

@@ -6,7 +6,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "ui/dialog";
-import { ApiKeyForm } from "@/components/forms/api-key-form";
 import { useTokenModalStore } from "@/store/token-modal";
 
 export function EditApiKeyModal() {
@@ -22,8 +21,6 @@ export function EditApiKeyModal() {
           <DialogHeader>
             <DialogTitle>Edit API Key</DialogTitle>
           </DialogHeader>
-
-          <ApiKeyForm onSuccess={() => setData(undefined)} />
         </div>
       </DialogContent>
     </Dialog>

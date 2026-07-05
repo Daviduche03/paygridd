@@ -4,7 +4,6 @@ import { Button } from "ui/button";
 import { Icons } from "ui/icons";
 import { Sheet, SheetContent, SheetHeader } from "ui/sheet";
 import { useCategoryParams } from "@/hooks/use-category-params";
-import { CategoryForm } from "../forms/category-form";
 
 export function CategoryCreateSheet() {
   const { setParams, createCategory } = useCategoryParams();
@@ -25,8 +24,6 @@ export function CategoryCreateSheet() {
             <Icons.Close className="size-5" />
           </Button>
         </SheetHeader>
-
-        <CategoryForm />
       </SheetContent>
     </Sheet>
   );

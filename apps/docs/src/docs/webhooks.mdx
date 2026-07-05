@@ -1,44 +1,204 @@
 # Webhooks
 
-PayGrid sends HTTP POST requests to your webhook URL when events occur on your account.
+Webhooks are the primary way PayGrid communicates real-time events to your server. When something happens (a payment arrives, an invoice is paid, a virtual account is provisioned), PayGrid sends an HTTP POST request to your registered endpoint URL.
+
+> **Note:** This page covers the PayGrid webhook system. You can manage webhooks from the [Developer dashboard](/docs/api-keys) or via the [Webhooks API](/docs/api-reference#webhooks-api).
+
+---
+
+## How It Works
+
+1. You register a webhook endpoint URL in the PayGrid dashboard or via the API.
+2. You select the event types you want to receive.
+3. When an event occurs, PayGrid sends a signed HTTPS POST to your endpoint.
+4. Your server verifies the signature and processes the event.
+
+---
 
 ## Supported Events
 
 | Event | Description |
 |-------|-------------|
-| `payment_success` | A payment was credited to your account |
-| `payment_failed` | A payment attempt failed |
-| `payment_reversal` | A payment was reversed to the customer |
-| `payout_success` | A payout was processed successfully |
-| `payout_failed` | A payout failed to process |
-| `payout_refund` | A payout was refunded |
+| `payment.received` | A payment was credited to one of your virtual accounts |
+| `payment.reversed` | A previously confirmed payment was reversed |
+| `payment.failed` | A payment attempt failed to settle |
+| `invoice.created` | A new invoice was generated |
+| `invoice.paid` | An invoice was fully paid |
+| `invoice.overdue` | An unpaid invoice passed its due date |
+| `reconciliation.completed` | An automatic reconciliation cycle finished processing |
+| `customer.created` | A new customer was added to your directory |
+| `account.provisioned` | A new dedicated virtual account was created |
+| `account.suspended` | A virtual account was suspended |
 
-## Configuration
+---
 
-Set your webhook URL in the PayGrid dashboard under **Settings > Webhooks**.
+## Payload Format
 
+Every webhook delivers a JSON payload with this structure:
+
+```json
+{
+  "event": "payment.received",
+  "timestamp": "2026-07-04T12:00:00.000Z",
+  "data": {
+    "id": "txn_uuid",
+    "type": "credit",
+    "amount": "50000.00",
+    "currency": "NGN",
+    "virtualAccountId": "va_uuid",
+    "senderName": "John Doe",
+    "senderBank": "GTBank",
+    "narration": "Payment for INV-001",
+    "occurredAt": "2026-07-04T12:00:00.000Z"
+  }
+}
 ```
-POST https://your-app.com/webhooks/paygrid
-```
+
+The `data` object mirrors the resource representation returned by the corresponding API endpoint. For `invoice.paid` events, `data` is an invoice object including the `paymentUrl` field.
+
+---
 
 ## Signature Verification
 
-Every webhook includes verification headers. Verify the HMAC-SHA256 signature using your secret key before processing the payload.
+Every webhook request includes two headers that allow you to cryptographically verify the payload originated from PayGrid and hasn't been tampered with.
 
 ### Headers
 
-| Header | Description |
-|--------|-------------|
-| `paygrid-signature` | HMAC-SHA256 signature of the raw body |
-| `paygrid-timestamp` | Unix timestamp of when the event was sent |
-| `paygrid-signature-algorithm` | Algorithm used (default: `hmac-sha256`) |
+| Header | Value | Example |
+|--------|-------|---------|
+| `paygrid-signature` | HMAC-SHA256 hex digest of the raw JSON body | `a1b2c3d4e5f6a7b8c9d0...` |
+| `paygrid-timestamp` | Unix timestamp (seconds) when the event was generated | `1720080000` |
 
 ### Verification Steps
 
-1. Concatenate the raw request body with the timestamp
-2. Generate an HMAC-SHA256 hash using your secret key
-3. Compare the generated hash with the signature header
+1. Extract the raw request body as a UTF-8 string.
+2. Take your webhook's **signing secret** (displayed once when the webhook is created).
+3. Compute `HMAC-SHA256(signing_secret, raw_body)` and output as hex.
+4. Compare the resulting hex string to the `paygrid-signature` header using a **constant-time comparison**.
+
+### Node.js Example
+
+```javascript
+import crypto from "node:crypto";
+
+const SECRET = process.env.PAYGRID_WEBHOOK_SECRET;
+
+app.post("/webhooks/paygrid", express.text({ type: "application/json" }), (req, res) => {
+  const rawBody = req.body;
+  const signature = req.headers["paygrid-signature"];
+  const timestamp = req.headers["paygrid-timestamp"];
+
+  // Verify signature
+  const expected = crypto
+    .createHmac("sha256", SECRET)
+    .update(rawBody)
+    .digest("hex");
+
+  const valid = crypto.timingSafeEqual(
+    Buffer.from(expected, "hex"),
+    Buffer.from(signature, "hex"),
+  );
+
+  if (!valid) {
+    return res.status(401).send("Invalid signature");
+  }
+
+  // Optionally enforce timestamp freshness (e.g. within 5 minutes)
+  const age = Math.floor(Date.now() / 1000) - Number(timestamp);
+  if (age > 300) {
+    return res.status(403).send("Stale event");
+  }
+
+  const payload = JSON.parse(rawBody);
+
+  // Process the event asynchronously
+  res.status(200).send("OK");
+});
+```
+
+### Python Example
+
+```python
+import hmac
+import hashlib
+from flask import Flask, request, abort
+
+app = Flask(__name__)
+SECRET = os.environ["PAYGRID_WEBHOOK_SECRET"]
+
+@app.route("/webhooks/paygrid", methods=["POST"])
+def webhook():
+    raw_body = request.get_data()
+    signature = request.headers.get("paygrid-signature")
+
+    expected = hmac.new(
+        SECRET.encode(),
+        raw_body,
+        hashlib.sha256,
+    ).hexdigest()
+
+    if not hmac.compare_digest(expected, signature):
+        abort(401)
+
+    payload = request.get_json()
+    # Process the event...
+    return "OK", 200
+```
+
+---
 
 ## Retry Policy
 
-PayGrid retries failed webhook deliveries up to 3 times with exponential backoff.
+PayGrid retries failed webhook deliveries with exponential backoff to handle transient server issues.
+
+| Attempt # | Delay after previous attempt | Cumulative time |
+|-----------|------------------------------|-----------------|
+| 1 | — | Immediate |
+| 2 | 1 minute | ~1 minute |
+| 3 | 5 minutes | ~6 minutes |
+| 4 | 15 minutes | ~21 minutes |
+| 5 | 1 hour | ~1 hour 21 minutes |
+| 6 (final) | 4 hours | ~5 hours 21 minutes |
+
+**Triggers a retry:**
+- Server returns HTTP 5xx
+- Server is unreachable (DNS resolution failure, connection refused)
+- Request exceeds the 10-second timeout
+
+**Does not trigger a retry:**
+- Server returns HTTP 4xx (treated as client configuration error)
+- Payload exceeds 256 KB
+
+---
+
+## Best Practices
+
+### Respond Immediately
+
+Return `200 OK` as fast as possible (within 10 seconds). Perform any heavy processing asynchronously using a job queue or background worker.
+
+### Deduplicate
+
+Events may be delivered more than once under rare conditions. Use the event `id` or `data.id` combined with `timestamp` to ensure idempotent processing.
+
+```sql
+INSERT INTO processed_events (event_id, timestamp)
+VALUES ($1, $2)
+ON CONFLICT (event_id) DO NOTHING;
+```
+
+### Reject Stale Events
+
+Check the `paygrid-timestamp` header to reject events older than 5 minutes. This prevents replay attacks.
+
+### Rotate Secrets
+
+If a signing secret is ever exposed:
+1. Delete the compromised webhook endpoint from the dashboard.
+2. Create a new endpoint with a fresh signing secret.
+3. Update your server with the new secret.
+4. Verify events are flowing correctly before removing the old endpoint code.
+
+### Monitor Delivery History
+
+Use the PayGrid dashboard to inspect delivery status for each webhook endpoint. Failed deliveries show response codes, response bodies, and the retry schedule.

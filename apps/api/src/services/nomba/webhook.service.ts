@@ -3,7 +3,11 @@ import { env } from "@/config/env";
 import { transactionRepository } from "@/repositories/transaction.repository";
 import { virtualAccountRepository } from "@/repositories/virtual-account.repository";
 import { webhookEventRepository } from "@/repositories/webhook-event.repository";
+import { customerRepository } from "@/repositories/customer.repository";
+import { businessRepository } from "@/repositories/business.repository";
+import { invoiceRepository } from "@/repositories/invoice.repository";
 import { reconciliationService } from "@/services/reconciliation.service";
+import { emailService } from "@/services/email.service";
 import type {
   NombaWebhookHeaders,
   NombaWebhookPayload,
@@ -125,12 +129,31 @@ async function persistToDatabase(payload: NombaWebhookPayload) {
   });
 
   if (isSuccess && created?.id && account.id) {
-    await reconciliationService.reconcileVirtualAccountPayment({
+    const invoiceId = await reconciliationService.reconcileVirtualAccountPayment({
       businessId: account.businessId,
       virtualAccountId: account.id,
       transactionId: created.id,
       amount: transaction.transactionAmount ?? 0,
     });
+
+    if (invoiceId && account.customerId) {
+      const [customer, business] = await Promise.all([
+        customerRepository.findById(account.businessId, account.customerId),
+        businessRepository.findById(account.businessId),
+      ]);
+      const customerEmail = customer?.billingEmail ?? customer?.email ?? undefined;
+      if (customerEmail && business?.name && customer) {
+        const paidInvoice = await invoiceRepository.findById(account.businessId, invoiceId);
+        emailService.sendPaymentConfirmation({
+          to: customerEmail,
+          customerName: customer.name ?? customerEmail,
+          businessName: business.name,
+          invoiceNumber: paidInvoice?.invoiceNumber ?? "",
+          amount: new Intl.NumberFormat("en-NG", { minimumFractionDigits: 2 }).format(transaction.transactionAmount ?? 0),
+          paidAt: new Date().toLocaleString("en-NG"),
+        }).catch(() => {});
+      }
+    }
   }
 
   return { businessId: account.businessId, transactionId: created?.id ?? null };

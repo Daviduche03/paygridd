@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate, NavLink, useParams, useNavigate } from "react-router-dom";
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { Menu, Search, Moon, Sun, FileText, BookOpen, Terminal, Webhook, CreditCard, ChevronRight, X } from "lucide-react";
+import { Menu, Search, Moon, Sun, FileText, BookOpen, Terminal, Webhook, CreditCard, KeyRound, Users, ChevronRight, X } from "lucide-react";
 
 const docs = import.meta.glob("./docs/**/*.mdx", { eager: true }) as Record<
   string,
@@ -20,17 +20,31 @@ const docEntries: DocEntry[] = Object.entries(docs)
       .split("/")
       .pop()!
       .replace(/[-_]/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase());
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .replace(/\bApi\b/g, "API");
     return { slug, title, Component: mod.default };
   })
-  .sort((a, b) => a.title.localeCompare(b.title));
+  .sort((a, b) => {
+    const order: Record<string, number> = {
+      "index": 0,
+      "getting-started": 1,
+      "api-keys": 2,
+      "api-reference": 3,
+      "customers": 4,
+      "virtual-accounts": 5,
+      "webhooks": 6,
+    };
+    return (order[a.slug] ?? 99) - (order[b.slug] ?? 99);
+  });
 
 const iconMap: Record<string, React.ReactNode> = {
   "index": <BookOpen size={18} />,
   "getting-started": <Terminal size={18} />,
   "virtual-accounts": <CreditCard size={18} />,
   "webhooks": <Webhook size={18} />,
+  "api-keys": <KeyRound size={18} />,
   "api-reference": <FileText size={18} />,
+  "customers": <Users size={18} />,
 };
 
 function DocPage() {

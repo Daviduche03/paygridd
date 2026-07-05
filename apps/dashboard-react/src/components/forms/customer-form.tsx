@@ -74,10 +74,6 @@ export function CustomerForm({ data }: Props) {
           queryKey: trpc.customers.getById.queryKey(),
         });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.search.global.queryKey(),
-        });
-
         setCustomerParams(null);
 
         if (data && fromInvoice) {

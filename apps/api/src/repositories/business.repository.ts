@@ -1,5 +1,5 @@
 import { db } from "@/config/db";
-import { businesses, users } from "@/db/schema";
+import { businesses, users, usersOnBusiness } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 export interface Business {
@@ -44,6 +44,12 @@ export const businessRepository = {
     if (!business) {
       throw new Error("Failed to create business");
     }
+
+    await db.insert(usersOnBusiness).values({
+      userId: data.userId,
+      businessId: business.id,
+      role: "owner",
+    });
 
     await db
       .update(users)

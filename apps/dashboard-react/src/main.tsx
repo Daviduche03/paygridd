@@ -8,6 +8,7 @@ import { makeClient } from "@/trpc/client";
 import { bindQueryClient } from "@/utils/session";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v6";
 import { I18nProviderClient } from "@/locales/client";
+import { Toaster } from "ui/toaster";
 import App from "./App";
 import "ui/globals.css";
 import "./styles/globals.css";
@@ -23,6 +24,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <QueryClientProvider client={queryClient}>
           <I18nProviderClient locale="en">
             <App />
+            <Toaster />
           </I18nProviderClient>
         </QueryClientProvider>
       </TRPCProvider>

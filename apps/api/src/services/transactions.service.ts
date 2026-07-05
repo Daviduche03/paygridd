@@ -101,6 +101,14 @@ function formatSender(senderName: string | null, senderBank: string | null) {
 }
 
 export const transactionsService = {
+  async reconciliationSummary(userId: string) {
+    const businessId = await getBusinessIdForUser(userId);
+    if (!businessId) {
+      return { pending: 0, matched: 0, discrepancies: 0 };
+    }
+    return transactionRepository.getReconciliationSummary(businessId);
+  },
+
   async summary(userId: string) {
     const businessId = await getBusinessIdForUser(userId);
     if (!businessId) {
@@ -192,6 +200,8 @@ export const transactionsService = {
         reconciliation: row.reconciliationStatus,
         invoiceId: row.invoiceId,
         invoice: row.invoiceNumber ?? "-",
+        invoiceAmount: row.invoiceAmount != null ? toNumber(row.invoiceAmount) : null,
+        invoiceAmountPaid: row.invoiceAmountPaid != null ? toNumber(row.invoiceAmountPaid) : null,
         date: formatDisplayDate(row.occurredAt ?? row.createdAt),
         occurredAt: row.occurredAt,
       })),

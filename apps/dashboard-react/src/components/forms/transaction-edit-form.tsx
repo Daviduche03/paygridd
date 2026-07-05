@@ -18,17 +18,13 @@ import { Label } from "ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "ui/popover";
 import { Switch } from "ui/switch";
 import { Textarea } from "ui/textarea";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, formatISO } from "date-fns";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useDebounceValue } from "usehooks-ts";
 import { AssignUser } from "@/components/assign-user";
-import { SelectAccount } from "@/components/select-account";
-import { SelectCategory } from "@/components/select-category";
 import { SelectCurrency } from "@/components/select-currency";
-import { TransactionAttachments } from "@/components/transaction-attachments";
 import { useInvalidateTransactionQueries } from "@/hooks/use-invalidate-transaction-queries";
-import { useUpdateTransactionCategory } from "@/hooks/use-update-transaction-category";
 import { useUserQuery } from "@/hooks/use-user";
 import { useTRPC } from "@/trpc/client";
 
@@ -44,17 +40,6 @@ export function TransactionEditForm({ transaction }: Props) {
   const invalidateTransactionQueries = useInvalidateTransactionQueries();
   const [isOpen, setIsOpen] = useState(false);
   const { data: user } = useUserQuery();
-  const { data: accounts } = useQuery(
-    trpc.bankAccounts.get.queryOptions({
-      enabled: true,
-    }),
-  );
-
-  const { data: categories } = useQuery(
-    trpc.transactionCategories.get.queryOptions(),
-  );
-
-  const { updateCategory } = useUpdateTransactionCategory();
 
   const updateTransactionMutation = useMutation(
     trpc.transactions.update.mutationOptions({
@@ -72,11 +57,6 @@ export function TransactionEditForm({ transaction }: Props) {
             queryKey: trpc.transactions.getById.queryKey({
               id: transaction.id,
             }),
-          });
-
-          // Invalidate global search
-          queryClient.invalidateQueries({
-            queryKey: trpc.search.global.queryKey(),
           });
         }
       },
@@ -106,26 +86,10 @@ export function TransactionEditForm({ transaction }: Props) {
         // Optimistically update details view
         queryClient.setQueryData(
           trpc.transactions.getById.queryKey({ id: transaction.id }),
-          (old: any) => {
-            if (variables.categorySlug && categories) {
-              const category = categories.find(
-                (c) => c.slug === variables.categorySlug,
-              );
-
-              if (category) {
-                return {
-                  ...old,
-                  ...variables,
-                  category,
-                };
-              }
-            }
-
-            return {
-              ...old,
-              ...variables,
-            };
-          },
+          (old: any) => ({
+            ...old,
+            ...variables,
+          }),
         );
 
         // Optimistically update list view
@@ -249,20 +213,6 @@ export function TransactionEditForm({ transaction }: Props) {
       });
     }
   }, [debouncedNote]);
-
-  // Memoize selected category from transaction
-  const selectedCategory = useMemo(() => {
-    if (transaction.category) {
-      return {
-        id: transaction.category.id,
-        name: transaction.category.name,
-        color: transaction.category.color ?? "",
-        slug: transaction.category.slug ?? "",
-      };
-    }
-
-    return undefined;
-  }, [transaction.category]);
 
   return (
     <div className="space-y-8">
@@ -388,32 +338,6 @@ export function TransactionEditForm({ transaction }: Props) {
 
       <div className="flex space-x-4">
         <div className="w-full">
-          <Label htmlFor="account" className="mb-2 block">
-            Account
-          </Label>
-          <SelectAccount
-            onChange={(value) => {
-              updateTransactionMutation.mutate({
-                id: transaction.id,
-                bankAccountId: value.id,
-              });
-
-              if (value.currency) {
-                updateTransactionMutation.mutate({
-                  id: transaction.id,
-                  currency: value.currency,
-                });
-              }
-            }}
-            value={transaction.account?.id ?? accounts?.at(0)?.id ?? ""}
-            placeholder="Select account"
-          />
-          <p className="text-[0.8rem] text-muted-foreground mt-2">
-            The account this transaction belongs to
-          </p>
-        </div>
-
-        <div className="w-full">
           <Label htmlFor="date" className="mb-2 block">
             Date
           </Label>
@@ -464,34 +388,6 @@ export function TransactionEditForm({ transaction }: Props) {
 
       <div className="flex space-x-4">
         <div className="w-full">
-          <Label htmlFor="category" className="mb-2 block">
-            Category
-          </Label>
-          <SelectCategory
-            onChange={async (value) => {
-              if (value && transaction.name) {
-                await updateCategory(transaction.id, transaction.name, {
-                  id: value.id,
-                  name: value.name,
-                  slug: value.slug,
-                });
-              } else if (!value && transaction.name) {
-                await updateCategory(transaction.id, transaction.name, {
-                  id: "",
-                  name: "",
-                  slug: "",
-                });
-              }
-            }}
-            hideLoading
-            selected={selectedCategory}
-          />
-          <p className="text-[0.8rem] text-muted-foreground mt-2">
-            Help organize and track your transactions
-          </p>
-        </div>
-
-        <div className="w-full">
           <Label htmlFor="assign" className="mb-2 block">
             Assign
           </Label>
@@ -510,22 +406,7 @@ export function TransactionEditForm({ transaction }: Props) {
         </div>
       </div>
 
-      <Accordion type="multiple" defaultValue={["attachment"]}>
-        <AccordionItem value="attachment">
-          <AccordionTrigger>Attachment</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                Upload receipts, invoices, or other documents related to this
-                transaction
-              </p>
-              <TransactionAttachments
-                id={transaction.id}
-                data={transaction.attachments}
-              />
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+      <Accordion type="multiple">
 
         <div className="mt-6 mb-4">
           <Label htmlFor="settings" className="mb-2 block font-medium text-md">

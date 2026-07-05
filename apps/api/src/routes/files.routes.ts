@@ -27,7 +27,7 @@ const upload = multer({
 
 export const filesRoutes = Router();
 
-filesRoutes.post("/upload", authMiddleware, upload.single("file"), (req, res) => {
+filesRoutes.post("/upload", authMiddleware, upload.single("file") as any, (req, res) => {
   if (!req.file) {
     res.status(400).json({ success: false, error: "No file uploaded" });
     return;
@@ -41,8 +41,8 @@ filesRoutes.post("/upload", authMiddleware, upload.single("file"), (req, res) =>
   });
 });
 
-filesRoutes.get("/download/:filename", (req, res) => {
-  const filename = path.basename(req.params.filename);
+filesRoutes.get("/download/:filename", authMiddleware, (req, res) => {
+  const filename = path.basename(req.params.filename!);
   const filePath = path.join(uploadDir, filename);
 
   if (!fs.existsSync(filePath)) {

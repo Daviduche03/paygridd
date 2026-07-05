@@ -1,6 +1,7 @@
 import { env } from "@/config/env";
 import { virtualAccountRepository } from "@/repositories/virtual-account.repository";
 import { nombaService } from "@/services/nomba/service";
+import type { VirtualAccountObject } from "@/services/nomba/types";
 
 type VirtualAccountKind = "static" | "dynamic";
 

@@ -1,8 +1,138 @@
-import { Terminal, CreditCard, Webhook, FileText } from "lucide-react";
+import { CreditCard, FileText, KeyRound, Terminal, Users, Webhook, Shield, RefreshCw } from "lucide-react";
 
-# PayGrid Documentation
+# PayGrid — Programmable Accounts Receivable for Nigerian Businesses
 
-Build payment flows for your Nigerian business with PayGrid's API. Manage virtual accounts, track transactions, and receive real-time webhook notifications.
+PayGrid is a REST API that turns bank account numbers into programmable payment rails. Issue invoices, provision dedicated virtual accounts for every customer, and let PayGrid automatically reconcile incoming payments — no manual matching, no spreadsheets, no chasing receipts.
+
+Built on Nomba's Dedicated Virtual Account infrastructure, PayGrid handles the entire accounts receivable lifecycle: **invoice → payment → reconciliation → notification**.
+
+## Core Capabilities
+
+<div className="grid gap-4 sm:grid-cols-3 my-8">
+  <div className="border border-border rounded-lg p-5 bg-card">
+    <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary mb-3">
+      <CreditCard size={18} />
+    </div>
+    <span className="font-medium text-foreground block mb-1">Virtual Accounts</span>
+    <p className="text-sm text-muted-foreground leading-relaxed">
+      Create unique NGN bank account numbers for each customer. Every payment lands in the right place automatically.
+    </p>
+  </div>
+  <div className="border border-border rounded-lg p-5 bg-card">
+    <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary mb-3">
+      <FileText size={18} />
+    </div>
+    <span className="font-medium text-foreground block mb-1">Invoicing</span>
+    <p className="text-sm text-muted-foreground leading-relaxed">
+      Create, send, and track invoices with payment links. Customers pay via bank transfer — no card required.
+    </p>
+  </div>
+  <div className="border border-border rounded-lg p-5 bg-card">
+    <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary mb-3">
+      <RefreshCw size={18} />
+    </div>
+    <span className="font-medium text-foreground block mb-1">Auto-Reconciliation</span>
+    <p className="text-sm text-muted-foreground leading-relaxed">
+      Incoming payments are automatically matched to invoices. Statuses update in real-time. No manual work.
+    </p>
+  </div>
+  <div className="border border-border rounded-lg p-5 bg-card">
+    <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary mb-3">
+      <Webhook size={18} />
+    </div>
+    <span className="font-medium text-foreground block mb-1">Webhooks</span>
+    <p className="text-sm text-muted-foreground leading-relaxed">
+      Receive real-time notifications for payments, reversals, overdue invoices, and more — with HMAC-signed payloads.
+    </p>
+  </div>
+  <div className="border border-border rounded-lg p-5 bg-card">
+    <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary mb-3">
+      <Users size={18} />
+    </div>
+    <span className="font-medium text-foreground block mb-1">Customer Directory</span>
+    <p className="text-sm text-muted-foreground leading-relaxed">
+      Maintain a central directory of everyone you bill. Link customers to invoices, virtual accounts, and transactions.
+    </p>
+  </div>
+  <div className="border border-border rounded-lg p-5 bg-card">
+    <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary mb-3">
+      <Shield size={18} />
+    </div>
+    <span className="font-medium text-foreground block mb-1">Scoped API Keys</span>
+    <p className="text-sm text-muted-foreground leading-relaxed">
+      Generate API keys with granular read/write scopes. Rotate and revoke from the dashboard at any time.
+    </p>
+  </div>
+</div>
+
+## How It Works
+
+1. **Create a customer** — Add a customer to your directory, or provision a virtual account first and link it later.
+2. **Issue an invoice** — Set the amount, due date, and assign a dedicated virtual account. PayGrid generates a shareable payment link.
+3. **Customer pays** — They transfer to the virtual account number via any Nigerian bank (mobile app, USSD, internet banking).
+4. **PayGrid reconciles** — The incoming payment is automatically matched to the invoice. Status flips to `paid` in real-time.
+5. **You get notified** — A webhook fires. Your system receives the confirmed payment data instantly.
+
+## Quick Start
+
+```bash
+# Create a customer
+curl -X POST https://api.paygrid.xyz/api/v1/customers \
+  -H "Authorization: Bearer pg_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Acme Corp", "email": "billing@acme.com"}'
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Acme Corp",
+    "email": "billing@acme.com",
+    "createdAt": "2026-07-04T12:00:00.000Z"
+  }
+}
+```
+
+```bash
+# Create an invoice
+curl -X POST https://api.paygrid.xyz/api/v1/invoices \
+  -H "Authorization: Bearer pg_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerId": "550e8400-e29b-41d4-a716-446655440000",
+    "invoiceNumber": "INV-001",
+    "amount": 150000,
+    "dueDate": "2026-08-04"
+  }'
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "invoiceNumber": "INV-001",
+    "amount": "150000.00",
+    "currency": "NGN",
+    "status": "unpaid",
+    "paymentUrl": "https://paygrid.xyz/i/660e8400-e29b-41d4-a716-446655440001",
+    "dueDate": "2026-08-04T00:00:00.000Z"
+  }
+}
+```
+
+Share `paymentUrl` with your customer. When they pay, PayGrid automatically reconciles the transaction and updates the invoice.
+
+## Use Cases
+
+- **SaaS subscriptions** — Provision a virtual account per tenant on sign-up. Incoming payments are automatically credited to the correct account.
+- **Freelance invoicing** — Generate invoices with payment links. Get notified the moment a client pays.
+- **Marketplaces** — Issue virtual accounts to vendors. Track incoming settlements per vendor without manual reconciliation.
+- **School fees & collections** — Generate unique payment references for each student. Reconcile en masse when payments arrive.
+
+## Documentation
 
 <div className="grid gap-4 sm:grid-cols-2 my-8">
   <a href="/docs/getting-started" className="group block border border-border rounded-lg p-5 bg-card hover:bg-accent transition-colors no-underline">
@@ -13,29 +143,18 @@ Build payment flows for your Nigerian business with PayGrid's API. Manage virtua
       <span className="font-medium text-foreground">Getting Started</span>
     </div>
     <p className="text-sm text-muted-foreground leading-relaxed">
-      Set up authentication, understand base URLs, and make your first API call in minutes.
+      Generate your first API key, authenticate, and make your first API call in minutes.
     </p>
   </a>
-  <a href="/docs/virtual-accounts" className="group block border border-border rounded-lg p-5 bg-card hover:bg-accent transition-colors no-underline">
+  <a href="/docs/api-keys" className="group block border border-border rounded-lg p-5 bg-card hover:bg-accent transition-colors no-underline">
     <div className="flex items-center gap-3 mb-3">
       <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary">
-        <CreditCard size={18} />
+        <KeyRound size={18} />
       </div>
-      <span className="font-medium text-foreground">Virtual Accounts</span>
+      <span className="font-medium text-foreground">API Keys &amp; Webhooks</span>
     </div>
     <p className="text-sm text-muted-foreground leading-relaxed">
-      Create unique NGN account numbers for your customers to receive payments.
-    </p>
-  </a>
-  <a href="/docs/webhooks" className="group block border border-border rounded-lg p-5 bg-card hover:bg-accent transition-colors no-underline">
-    <div className="flex items-center gap-3 mb-3">
-      <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary">
-        <Webhook size={18} />
-      </div>
-      <span className="font-medium text-foreground">Webhooks</span>
-    </div>
-    <p className="text-sm text-muted-foreground leading-relaxed">
-      Receive and verify real-time payment notifications with HMAC signatures.
+      Manage API keys with scoped permissions and configure webhook endpoints for event notifications.
     </p>
   </a>
   <a href="/docs/api-reference" className="group block border border-border rounded-lg p-5 bg-card hover:bg-accent transition-colors no-underline">
@@ -46,45 +165,40 @@ Build payment flows for your Nigerian business with PayGrid's API. Manage virtua
       <span className="font-medium text-foreground">API Reference</span>
     </div>
     <p className="text-sm text-muted-foreground leading-relaxed">
-      Complete endpoint reference for virtual accounts, transactions, and transfers.
+      Complete endpoint reference for customers, invoices, virtual accounts, transactions, and webhooks.
+    </p>
+  </a>
+  <a href="/docs/customers" className="group block border border-border rounded-lg p-5 bg-card hover:bg-accent transition-colors no-underline">
+    <div className="flex items-center gap-3 mb-3">
+      <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary">
+        <Users size={18} />
+      </div>
+      <span className="font-medium text-foreground">Customers</span>
+    </div>
+    <p className="text-sm text-muted-foreground leading-relaxed">
+      Create, search, and update your customer directory.
+    </p>
+  </a>
+  <a href="/docs/virtual-accounts" className="group block border border-border rounded-lg p-5 bg-card hover:bg-accent transition-colors no-underline">
+    <div className="flex items-center gap-3 mb-3">
+      <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary">
+        <CreditCard size={18} />
+      </div>
+      <span className="font-medium text-foreground">Virtual Accounts</span>
+    </div>
+    <p className="text-sm text-muted-foreground leading-relaxed">
+      Provision unique NGN account numbers for your customers to receive payments.
+    </p>
+  </a>
+  <a href="/docs/webhooks" className="group block border border-border rounded-lg p-5 bg-card hover:bg-accent transition-colors no-underline">
+    <div className="flex items-center gap-3 mb-3">
+      <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary">
+        <Webhook size={18} />
+      </div>
+      <span className="font-medium text-foreground">Webhooks</span>
+    </div>
+    <p className="text-sm text-muted-foreground leading-relaxed">
+      Receive real-time payment notifications with HMAC-signed payloads and automatic retries.
     </p>
   </a>
 </div>
-
-## Quick Start
-
-Create a virtual account with a single API call:
-
-```bash
-curl -X POST https://api.paygrid.xyz/v1/accounts/virtual \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "accountRef": "cust-abc123",
-    "accountName": "Acme Inc"
-  }'
-```
-
-The response includes a unique bank account number your customer can use to receive payments:
-
-```json
-{
-  "code": "00",
-  "description": "Success",
-  "data": {
-    "accountRef": "cust-abc123",
-    "accountName": "Acme Inc",
-    "bankName": "Nombank MFB",
-    "bankAccountNumber": "9391076543",
-    "currency": "NGN"
-  }
-}
-```
-
-## Environment
-
-| Environment | Base URL |
-|-------------|----------|
-| Production | `https://api.paygrid.xyz` |
-| Sandbox | `https://sandbox.paygrid.xyz` |
-| Webhooks | `https://your-app.com/webhooks/paygrid` |

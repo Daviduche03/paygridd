@@ -2,6 +2,8 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { env } from "@/config/env";
 import { errorHandler } from "@/middleware/error.middleware";
@@ -11,6 +13,7 @@ import { createContext } from "@/trpc/context";
 import { authRoutes } from "@/routes/auth.routes";
 import { filesRoutes } from "@/routes/files.routes";
 import { webhooksRoutes } from "@/routes/webhooks.routes";
+import { apiV1Routes } from "@/routes/api-v1.routes";
 
 export function createApp() {
   const app = express();
@@ -22,10 +25,40 @@ export function createApp() {
     logger.info(`Serving frontend from ${frontendDist}`);
   }
 
-  // Security + basics
+  // Security headers
+  app.use(helmet());
+
+  // Rate limiting
+  const apiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: "Too many requests, please try again later" },
+  });
+  app.use("/trpc", apiLimiter);
+  app.use("/api", apiLimiter);
+
+  const authLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: "Too many requests, please try again later" },
+  });
+  app.use("/auth", authLimiter);
+
+  // CORS
+  const allowedOrigins = env.ALLOWED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean);
   app.use(
     cors({
-      origin: env.ALLOWED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean),
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error("Not allowed by CORS"));
+        }
+      },
       credentials: true,
     }),
   );
@@ -66,6 +99,7 @@ export function createApp() {
   app.use("/auth", authRoutes);
   app.use("/files", filesRoutes);
   app.use("/webhooks", webhooksRoutes);
+  app.use("/api/v1", apiV1Routes);
 
   // tRPC — all API business logic
   app.use(

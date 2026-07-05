@@ -1,16 +1,4 @@
-import {
-  ComboboxDropdown,
-  type ComboboxItem,
-} from "ui/combobox-dropdown";
-import type { PopoverContent } from "ui/popover";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type React from "react";
-import { useEffect, useState } from "react";
-import { useTRPC } from "@/trpc/client";
-import { formatAccountName } from "@/utils/format";
-import { TransactionBankAccount } from "./transaction-bank-account";
-
-type SelectedItem = ComboboxItem & {
+type SelectedItem = {
   id: string;
   label: string;
   logo: string | null;
@@ -23,119 +11,10 @@ type Props = {
   className?: string;
   value?: string;
   onChange: (value: SelectedItem) => void;
-  popoverProps?: React.ComponentProps<typeof PopoverContent>;
+  popoverProps?: unknown;
   modal?: boolean;
 };
 
-export function SelectAccount({
-  placeholder,
-  onChange,
-  value,
-  popoverProps,
-  modal,
-}: Props) {
-  const trpc = useTRPC();
-  const queryClient = useQueryClient();
-  const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null);
-
-  const { data, isLoading } = useQuery(trpc.bankAccounts.get.queryOptions());
-
-  const createBankAccountMutation = useMutation(
-    trpc.bankAccounts.create.mutationOptions({
-      onSuccess: (data) => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.bankAccounts.get.queryKey(),
-        });
-
-        if (data) {
-          onChange({
-            id: data.id,
-            label: data.name ?? "",
-            logo: null,
-            currency: null,
-          });
-
-          setSelectedItem({
-            id: data.id,
-            label: data.name ?? "",
-            logo: null,
-            currency: null,
-          });
-        }
-      },
-    }),
-  );
-
-  useEffect(() => {
-    if (value && data) {
-      const found = data.find((d) => d.id === value);
-
-      if (found) {
-        setSelectedItem({
-          id: found.id,
-          label: found.name ?? "",
-          logo: found.bankConnection?.logoUrl ?? null,
-          currency: found.currency ?? null,
-        });
-      }
-    }
-  }, [value, data]);
-
-  if (isLoading) {
-    return null;
-  }
-
-  return (
-    <ComboboxDropdown
-      disabled={createBankAccountMutation.isPending}
-      placeholder={placeholder}
-      searchPlaceholder="Select or create account"
-      items={
-        data?.map((d) => ({
-          id: d.id,
-          label: d.name ?? "",
-          logo: d.bankConnection?.logoUrl ?? null,
-          currency: d.currency ?? null,
-        })) ?? []
-      }
-      selectedItem={selectedItem ?? undefined}
-      onSelect={(item) => {
-        onChange(item);
-      }}
-      onCreate={(name) => {
-        createBankAccountMutation.mutate({ name, manual: true });
-      }}
-      popoverProps={popoverProps}
-      modal={modal}
-      renderSelectedItem={(selectedItem) => {
-        return (
-          <TransactionBankAccount
-            name={formatAccountName({
-              name: selectedItem.label,
-              currency: selectedItem?.currency,
-            })}
-            logoUrl={selectedItem?.logo ?? undefined}
-          />
-        );
-      }}
-      renderOnCreate={(value) => {
-        return (
-          <div className="flex items-center space-x-2">
-            <span>{`Create "${value}"`}</span>
-          </div>
-        );
-      }}
-      renderListItem={({ item }) => {
-        return (
-          <TransactionBankAccount
-            name={formatAccountName({
-              name: item.label,
-              currency: item?.currency,
-            })}
-            logoUrl={item.logo ?? undefined}
-          />
-        );
-      }}
-    />
-  );
+export function SelectAccount(_props: Props) {
+  return null;
 }

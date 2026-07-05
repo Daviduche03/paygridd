@@ -9,18 +9,7 @@ import {
 } from "ui/accordion";
 import { cn } from "ui/cn";
 import { Label } from "ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "ui/select";
 import { Skeleton } from "ui/skeleton";
-import { Switch } from "ui/switch";
-import { ToastAction } from "ui/toast";
-import { toast } from "ui/use-toast";
 import { getTaxTypeLabel } from "utils/tax";
 import { useOpenPanel } from "@openpanel/nextjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -32,12 +21,7 @@ import { useTRPC } from "@/trpc/client";
 import { AssignUser } from "./assign-user";
 import { FormatAmount } from "./format-amount";
 import { Note } from "./note";
-import { SelectCategory } from "./select-category";
-import { SelectTags } from "./select-tags";
-import { SuggestedMatch } from "./suggested-match";
 import { TaxAmount } from "./tax-amount";
-import { TransactionAttachments } from "./transaction-attachments";
-import { TransactionBankAccount } from "./transaction-bank-account";
 import { TransactionShortcuts } from "./transaction-shortcuts";
 
 export function TransactionDetails() {
@@ -117,23 +101,6 @@ export function TransactionDetails() {
         queryClient.setQueryData(
           trpc.transactions.getById.queryKey({ id: transactionId! }),
           (old: any) => {
-            if (variables.categorySlug) {
-              const categories = queryClient.getQueryData(
-                trpc.transactionCategories.get.queryKey(),
-              );
-              const category = categories?.find(
-                (c) => c.slug === variables.categorySlug,
-              );
-
-              if (category) {
-                return {
-                  ...old,
-                  ...variables,
-                  category,
-                };
-              }
-            }
-
             return {
               ...old,
               ...variables,
@@ -156,13 +123,6 @@ export function TransactionDetails() {
                     ? {
                         ...transaction,
                         ...variables,
-                        ...(variables.categorySlug && {
-                          category: queryClient
-                            .getQueryData(
-                              trpc.transactionCategories.get.queryKey(),
-                            )
-                            ?.find((c) => c.slug === variables.categorySlug),
-                        }),
                       }
                     : transaction,
                 ),
@@ -185,48 +145,6 @@ export function TransactionDetails() {
         );
       },
       onSettled: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.getById.queryKey({ id: transactionId! }),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.get.infiniteQueryKey(),
-        });
-      },
-    }),
-  );
-
-  const createTransactionTagMutation = useMutation(
-    trpc.transactionTags.create.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.getById.queryKey({ id: transactionId! }),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.get.infiniteQueryKey(),
-        });
-      },
-    }),
-  );
-
-  const deleteTransactionTagMutation = useMutation(
-    trpc.transactionTags.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.getById.queryKey({ id: transactionId! }),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.get.infiniteQueryKey(),
-        });
-      },
-    }),
-  );
-
-  const updateTransactionsMutation = useMutation(
-    trpc.transactions.updateMany.mutationOptions({
-      onSuccess: (_, _data) => {
         queryClient.invalidateQueries({
           queryKey: trpc.transactions.getById.queryKey({ id: transactionId! }),
         });
@@ -287,11 +205,7 @@ export function TransactionDetails() {
     );
   }
 
-  const defaultValue = ["attachment"];
-
-  if (data?.note) {
-    defaultValue.push("note");
-  }
+  const defaultValue = data?.note ? ["note"] : [];
 
   return (
     <div className="h-[calc(100vh-80px)] scrollbar-hide overflow-auto pb-12">
@@ -307,13 +221,6 @@ export function TransactionDetails() {
             </div>
           ) : (
             <div className="flex items-center justify-between">
-              {data?.account?.connection?.logoUrl && (
-                <TransactionBankAccount
-                  name={data?.account?.name ?? undefined}
-                  logoUrl={data.account.connection.logoUrl}
-                  className="text-[#606060] text-xs"
-                />
-              )}
               <span className="text-[#606060] text-xs select-text">
                 {data?.date && format(parseISO(data.date), "MMM d, y")}
               </span>
@@ -372,21 +279,6 @@ export function TransactionDetails() {
           <Label htmlFor="category" className="mb-2 block">
             Category
           </Label>
-
-          <SelectCategory
-            id={transactionId}
-            // @ts-expect-error
-            selected={data?.category ?? undefined}
-            onChange={async (category) => {
-              if (category && data?.id && data?.name) {
-                await updateCategory(data.id, data.name, {
-                  id: category.id,
-                  name: category.name,
-                  slug: category.slug,
-                });
-              }
-            }}
-          />
         </div>
 
         <div>
@@ -414,57 +306,7 @@ export function TransactionDetails() {
         </div>
       </div>
 
-      <div className="mt-6">
-        <Label htmlFor="tags" className="mb-2 block">
-          Tags
-        </Label>
-
-        <SelectTags
-          key={data?.id + data?.tags?.length}
-          tags={data?.tags?.map((tag) => ({
-            id: tag.id,
-            label: tag.name!,
-            value: tag.name!,
-          }))}
-          onSelect={(tag) => {
-            if (tag.id) {
-              createTransactionTagMutation.mutate({
-                tagId: tag.id,
-                transactionId: transactionId!,
-              });
-            }
-          }}
-          onRemove={(tag) => {
-            if (tag.id) {
-              deleteTransactionTagMutation.mutate({
-                tagId: tag.id,
-                transactionId: transactionId!,
-              });
-            }
-          }}
-        />
-      </div>
-
-      {(data?.suggestion?.suggestionId || data?.hasPendingSuggestion) && (
-        <div className="mt-6">
-          <SuggestedMatch
-            suggestion={data?.suggestion}
-            transactionId={transactionId!}
-            isLoading={
-              data?.hasPendingSuggestion && !data?.suggestion?.suggestionId
-            }
-          />
-        </div>
-      )}
-
       <Accordion type="multiple" defaultValue={defaultValue}>
-        <AccordionItem value="attachment">
-          <AccordionTrigger>Attachments</AccordionTrigger>
-          <AccordionContent className="select-text">
-            <TransactionAttachments id={data?.id} data={data?.attachments} />
-          </AccordionContent>
-        </AccordionItem>
-
         <AccordionItem value="general">
           <AccordionTrigger>General</AccordionTrigger>
           <AccordionContent className="select-text">
@@ -501,111 +343,6 @@ export function TransactionDetails() {
               taxAmount={data?.taxAmount}
               taxType={data?.taxType}
             />
-
-            <div className="flex flex-row items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="mb-2 block font-medium text-md">
-                  Mark as recurring
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Mark as recurring. Similar future transactions will be
-                  automatically categorized and flagged as recurring.
-                </p>
-              </div>
-              <Switch
-                checked={data?.recurring ?? false}
-                onCheckedChange={(checked) => {
-                  updateTransactionMutation.mutate({
-                    id: data?.id,
-                    recurring: checked,
-                  });
-                }}
-              />
-            </div>
-
-            {data?.recurring && (
-              <Select
-                value={data?.frequency ?? undefined}
-                onValueChange={async (value) => {
-                  updateTransactionMutation.mutate({
-                    id: data?.id,
-                    frequency: value as
-                      | "weekly"
-                      | "monthly"
-                      | "annually"
-                      | "irregular",
-                  });
-
-                  const similarTransactions = await queryClient.fetchQuery(
-                    trpc.transactions.getSimilarTransactions.queryOptions({
-                      transactionId: data?.id,
-                      name: data.name,
-                      frequency: value as
-                        | "weekly"
-                        | "monthly"
-                        | "annually"
-                        | "irregular",
-                    }),
-                  );
-
-                  if (
-                    similarTransactions?.length &&
-                    similarTransactions.length > 1
-                  ) {
-                    toast({
-                      duration: 6000,
-                      variant: "ai",
-                      title: "PayGrid AI",
-                      description: `We found ${similarTransactions?.length} similar transactions to "${data?.name}". Mark them as recurring (${value}) too?`,
-                      footer: (
-                        <div className="flex space-x-2 mt-4">
-                          <ToastAction altText="Cancel" className="pl-5 pr-5">
-                            Cancel
-                          </ToastAction>
-                          <ToastAction
-                            altText="Yes"
-                            onClick={() => {
-                              // Use bulk update with the similar transaction IDs
-                              const similarTransactionIds =
-                                similarTransactions.map((t) => t.id);
-                              updateTransactionsMutation.mutate({
-                                ids: similarTransactionIds,
-                                recurring: true,
-                                frequency: value as
-                                  | "weekly"
-                                  | "monthly"
-                                  | "annually"
-                                  | "irregular",
-                              });
-                            }}
-                            className="pl-5 pr-5 bg-primary text-primary-foreground hover:bg-primary/90"
-                          >
-                            Yes
-                          </ToastAction>
-                        </div>
-                      ),
-                    });
-                  }
-                }}
-              >
-                <SelectTrigger className="w-full mt-4">
-                  <SelectValue placeholder="Select frequency" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {[
-                      { id: "weekly", name: "Weekly" },
-                      { id: "monthly", name: "Monthly" },
-                      { id: "annually", name: "Annually" },
-                    ].map(({ id, name }) => (
-                      <SelectItem key={id} value={id}>
-                        {name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            )}
           </AccordionContent>
         </AccordionItem>
 

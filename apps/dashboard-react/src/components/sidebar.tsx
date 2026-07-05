@@ -9,7 +9,6 @@ import { BusinessDropdown } from "@/components/business-dropdown";
 import { cn } from "ui/cn";
 import { TopBar } from "@/components/header";
 
-import { ExportStatus } from "@/components/export-status";
 import { GlobalSheetsProvider } from "@/components/sheets/global-sheets-provider";
 import { TimezoneDetector } from "@/components/timezone-detector";
 import { hasAuthToken } from "@/utils/session";
@@ -101,7 +100,6 @@ export function SidebarLayout() {
         </div>
       </div>
 
-      <ExportStatus />
       <GlobalSheetsProvider />
       <TimezoneDetector />
     </div>

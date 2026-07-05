@@ -33,7 +33,6 @@ import { useOpenPanel } from "@openpanel/nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { z } from "zod/v3";
-import { useJobStatus } from "@/hooks/use-job-status";
 import { useBusinessMutation, useBusinessQuery } from "@/hooks/use-business";
 import { useUserQuery } from "@/hooks/use-user";
 import { useZodForm } from "@/hooks/use-zod-form";
@@ -105,41 +104,6 @@ export function ExportTransactionsModal({
 
   const totalCount = transactionIds.length;
 
-  const { status: jobStatus } = useJobStatus({
-    jobId: exportData?.runId,
-    enabled: !!exportData?.runId && isOpen,
-  });
-
-  // Handle job completion/failure
-  useEffect(() => {
-    if (jobStatus === "completed") {
-      setIsExporting(false);
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({
-        queryKey: trpc.transactions.get.infiniteQueryKey(),
-      });
-      queryClient.invalidateQueries({
-        queryKey: trpc.transactions.getReviewCount.queryKey(),
-      });
-      // Delay clearing exportData to allow export bar to show completion
-      setTimeout(() => {
-        setExportData(undefined);
-      }, 2000);
-      onOpenChange(false);
-    } else if (jobStatus === "failed") {
-      setIsExporting(false);
-      setExportData(undefined);
-    }
-  }, [
-    jobStatus,
-    setIsExporting,
-    setExportData,
-    onOpenChange,
-    queryClient,
-    trpc.transactions.get,
-    trpc.transactions.getReviewCount,
-  ]);
-
   const savedSettings = business?.exportSettings
     ? {
         ...exportSettingsDefaults,
@@ -198,9 +162,7 @@ export function ExportTransactionsModal({
 
   const isExporting =
     form.formState.isSubmitting ||
-    exportMutation.isPending ||
-    jobStatus === "active" ||
-    jobStatus === "waiting";
+    exportMutation.isPending;
 
   const sendEmail = form.watch("sendEmail");
   const includeCSV = form.watch("includeCSV");

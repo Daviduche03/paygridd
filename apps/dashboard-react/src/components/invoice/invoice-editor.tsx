@@ -8,7 +8,6 @@ import {
   type SlashMenuRef,
 } from "ui/editor/extentions/slash-command";
 import { formatAmount } from "utils/format";
-import { useQuery } from "@tanstack/react-query";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
@@ -23,11 +22,6 @@ import { format } from "date-fns";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import tippy, { type Instance } from "tippy.js";
-import { useTRPC } from "@/trpc/client";
-import {
-  formatBankPaymentDetails,
-  formatBankPreview,
-} from "./utils/format-bank-details";
 
 type InvoiceEditorProps = {
   initialContent?: JSONContent;
@@ -58,8 +52,6 @@ export function InvoiceEditor({
   onBlurRef.current = onBlur;
   onChangeRef.current = onChange;
 
-  // Get tRPC client and form context
-  const trpc = useTRPC();
   const { control } = useFormContext();
 
   // Watch form values for slash commands (useWatch triggers re-renders)
@@ -71,38 +63,10 @@ export function InvoiceEditor({
   const dateFormat =
     useWatch({ control, name: "template.dateFormat" }) || "MM/dd/yyyy";
 
-  // Fetch bank accounts with payment info
-  const { data: bankAccounts = [] } = useQuery({
-    ...trpc.bankAccounts.getWithPaymentInfo.queryOptions(),
-    staleTime: 1000 * 60 * 5,
-  });
 
   // Build slash command items
   const slashCommandItems = useMemo((): SlashCommandItem[] => {
     const items: SlashCommandItem[] = [];
-
-    if (bankAccounts?.length > 0) {
-      items.push({
-        id: "bank-account",
-        label: "Bank Account",
-        hasSubmenu: true,
-        submenuItems: bankAccounts.map((account) => ({
-          id: account.id,
-          label: account.name,
-          description: account.bankName || formatBankPreview(account),
-          command: ({ editor, range }) => {
-            editor
-              .chain()
-              .focus()
-              .deleteRange(range)
-              .insertContent(formatBankPaymentDetails(account))
-              .run();
-          },
-        })),
-        command: () => {},
-      });
-    }
-
     items.push({
       id: "due-date",
       label: "Due Date",
@@ -164,7 +128,6 @@ export function InvoiceEditor({
 
     return items;
   }, [
-    bankAccounts,
     dueDate,
     dateFormat,
     amount,

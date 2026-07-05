@@ -1,7 +1,11 @@
 import { invoiceRepository } from "@/repositories/invoice.repository";
 import { virtualAccountRepository } from "@/repositories/virtual-account.repository";
 import { virtualAccountService } from "@/services/virtual-account.service";
+import { emailService } from "@/services/email.service";
+import { customerRepository } from "@/repositories/customer.repository";
+import { businessRepository } from "@/repositories/business.repository";
 import { getBusinessIdForUser } from "@/utils/business";
+import { env } from "@/config/env";
 import { pool } from "@/config/db";
 
 type InvoiceStatus =
@@ -788,6 +792,27 @@ export const invoiceService = {
       throw new Error("Failed to create invoice");
     }
 
+    if (status === "unpaid" && existing.customerId) {
+      const [customer, business] = await Promise.all([
+        customerRepository.findById(businessId, existing.customerId),
+        businessRepository.findById(businessId),
+      ]);
+      const customerEmail = customer?.billingEmail ?? customer?.email;
+      if (customerEmail && business?.name && customer?.name) {
+        emailService.sendInvoiceNotification({
+          to: customerEmail,
+          customerName: customer.name,
+          businessName: business.name,
+          invoiceNumber: existing.invoiceNumber ?? "",
+          amount: new Intl.NumberFormat("en-NG", { minimumFractionDigits: 2 }).format(toNumber(existing.amount)),
+          dueDate: formatDate(existing.dueDate),
+          paymentUrl: `${env.FRONTEND_URL}/i/${saved.id}`,
+        }).catch((err) => {
+          console.error("[EMAIL FAILED] Invoice notification:", err);
+        });
+      }
+    }
+
     return { id: saved.id };
   },
 
@@ -806,9 +831,14 @@ export const invoiceService = {
       data.amount != null ||
       (Array.isArray(data.lineItems) && data.lineItems.length > 0);
     const amount = hasAmountData ? calculateAmount(data) : toNumber(existing.amount);
-    const status = data.status ?? (existing.status as InvoiceStatus);
+    const requestedStatus = data.status ?? (existing.status as InvoiceStatus);
+    let status = requestedStatus;
     let amountPaid = toNumber(existing.amountPaid);
     let paidAt = existing.paidAt;
+
+    if (status === "paid" && existing.status !== "paid") {
+      throw new Error("Cannot mark invoice as paid via update. Use the payment flow instead.");
+    }
 
     if (status === "paid") {
       amountPaid = amount;

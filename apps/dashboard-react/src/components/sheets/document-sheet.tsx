@@ -1,7 +1,6 @@
 "use client";
 
 import { Sheet, SheetContent } from "ui/sheet";
-import { DocumentDetails } from "@/components/document-details";
 import { useDocumentParams } from "@/hooks/use-document-params";
 
 export function DocumentSheet() {
@@ -15,7 +14,6 @@ export function DocumentSheet() {
       onOpenChange={() => setParams({ documentId: null, filePath: null })}
     >
       <SheetContent style={{ maxWidth: 647 }}>
-        <DocumentDetails />
       </SheetContent>
     </Sheet>
   );

@@ -1,25 +1,39 @@
 # Virtual Accounts
 
-Generate unique NGN account numbers for your customers to receive payments.
+Dedicated Virtual Accounts (DVAs) are unique NGN bank account numbers provisioned for your customers to make payments into. PayGrid automatically reconciles incoming payments against invoices.
+
+## Endpoints
+
+Manage virtual accounts via the REST API:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/virtual-accounts` | List virtual accounts |
+| `POST` | `/api/v1/virtual-accounts` | Create a virtual account |
+| `GET` | `/api/v1/virtual-accounts/:id` | Get a single virtual account |
+
+See the [API Reference](/docs/api-reference#virtual-accounts) for full request/response schemas.
 
 ## Account Types
 
 | Type | Description |
 |------|-------------|
-| **Static** | Permanent account number for recurring customers |
+| **Static** | Permanent account number tied to a customer |
 | **Dynamic** | Temporary account with optional expiry and expected amount |
 
 ## Create a Virtual Account
 
-Creates a static virtual account linked to your main account.
-
 ```bash
-curl -X POST https://api.paygrid.xyz/v1/accounts/virtual \
-  -H "Authorization: Bearer YOUR_TOKEN" \
+curl -X POST https://api.paygrid.xyz/api/v1/virtual-accounts \
+  -H "Authorization: Bearer pg_xxx" \
   -H "Content-Type: application/json" \
   -d '{
     "accountRef": "cust-abc123",
-    "accountName": "John Doe"
+    "accountName": "Acme Corp - Payments",
+    "accountNumber": "9391076543",
+    "bankName": "Nombank MFB",
+    "customerId": "550e8400-e29b-41d4-a716-446655440000",
+    "expectedAmount": 50000
   }'
 ```
 
@@ -27,40 +41,43 @@ curl -X POST https://api.paygrid.xyz/v1/accounts/virtual \
 
 ```json
 {
-  "code": "00",
-  "description": "Success",
+  "success": true,
   "data": {
+    "id": "770e8400-e29b-41d4-a716-446655440002",
+    "customerId": "550e8400-e29b-41d4-a716-446655440000",
+    "kind": "static",
     "accountRef": "cust-abc123",
-    "accountName": "John Doe",
+    "accountName": "Acme Corp - Payments",
+    "accountNumber": "9391076543",
     "bankName": "Nombank MFB",
-    "bankAccountNumber": "9391076543",
-    "currency": "NGN"
+    "currency": "NGN",
+    "status": "active",
+    "expectedAmount": "50000.00",
+    "createdAt": "2026-07-04T12:00:00.000Z",
+    "updatedAt": "2026-07-04T12:00:00.000Z"
   }
 }
 ```
 
-## Create for a Sub-Account
+## List Virtual Accounts
 
-Creates a virtual account linked to a specific sub-account:
-
-```bash
-curl -X POST https://api.paygrid.xyz/v1/accounts/virtual/{subAccountId} \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "accountRef": "cust-abc123",
-    "accountName": "John Doe"
-  }'
-```
-
-## Update a Virtual Account
+Filter by status, customer, or search by name/number:
 
 ```bash
-curl -X PATCH https://api.paygrid.xyz/v1/accounts/virtual/{identifier} \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "accountName": "Jane Doe",
-    "callbackUrl": "https://your-app.com/webhooks/callback"
-  }'
+curl "https://api.paygrid.xyz/api/v1/virtual-accounts?status=active&customerId=550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer pg_xxx"
 ```
+
+## Auto-Reconciliation
+
+When a customer pays into a virtual account, PayGrid:
+1. Captures the incoming transaction via Nomba webhook
+2. Matches it to the linked customer and invoice
+3. Updates the invoice status to `paid`
+4. Fires a `payment.received` and `invoice.paid` webhook event
+
+Reconciliation statuses: `pending`, `matched`, `underpaid`, `overpaid`, `duplicate`, `needs_review`.
+
+## Scope
+
+These endpoints require the `customers.read` (list/get) or `customers.write` (create) scope on your API key.

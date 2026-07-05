@@ -45,7 +45,7 @@ const presetNames: Record<string, ScopePreset> = {
 };
 
 export function scopesToName(scopes: string[]) {
-  const scope = scopes[0];
+  const scope = scopes[0] ?? "";
   const preset = presetNames[scope] ?? "restricted";
   return { name: scopes.join(", "), preset };
 }

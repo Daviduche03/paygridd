@@ -3,7 +3,6 @@
 import { ConnectTransactionsModal } from "@/components/modals/connect-transactions-modal";
 import { AppDetailSheet } from "@/components/sheets/app-detail-sheet";
 import { CategoryCreateSheet } from "@/components/sheets/category-create-sheet";
-import { CategoryEditSheet } from "@/components/sheets/category-edit-sheet";
 import { CustomerCreateSheet } from "@/components/sheets/customer-create-sheet";
 import { CustomerDetailsSheet } from "@/components/sheets/customer-details-sheet";
 import { CustomerEditSheet } from "@/components/sheets/customer-edit-sheet";
@@ -21,7 +20,6 @@ export function GlobalSheets() {
   return (
     <>
       <CategoryCreateSheet />
-      <CategoryEditSheet />
 
       <CustomerCreateSheet />
       <CustomerDetailsSheet />

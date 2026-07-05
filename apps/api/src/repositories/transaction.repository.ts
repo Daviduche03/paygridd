@@ -183,6 +183,8 @@ export const transactionRepository = {
         virtualAccountNumber: virtualAccounts.accountNumber,
         invoiceId: transactions.invoiceId,
         invoiceNumber: invoices.invoiceNumber,
+        invoiceAmount: invoices.amount,
+        invoiceAmountPaid: invoices.amountPaid,
       })
       .from(transactions)
       .leftJoin(customers, eq(transactions.customerId, customers.id))
@@ -218,6 +220,23 @@ export const transactionRepository = {
       .orderBy(desc(transactions.occurredAt), desc(transactions.createdAt))
       .limit(limit)
       .offset(offset);
+  },
+
+  async getReconciliationSummary(businessId: string) {
+    const [row] = await db
+      .select({
+        pending: sql<number>`count(*) filter (where ${transactions.reconciliationStatus} = 'pending')::int`,
+        matched: sql<number>`count(*) filter (where ${transactions.reconciliationStatus} = 'matched')::int`,
+        discrepancies: sql<number>`count(*) filter (where ${transactions.reconciliationStatus} in ('underpaid', 'overpaid', 'duplicate', 'needs_review'))::int`,
+      })
+      .from(transactions)
+      .where(eq(transactions.businessId, businessId));
+
+    return {
+      pending: row?.pending ?? 0,
+      matched: row?.matched ?? 0,
+      discrepancies: row?.discrepancies ?? 0,
+    };
   },
 
   async countPendingReview(businessId: string) {
