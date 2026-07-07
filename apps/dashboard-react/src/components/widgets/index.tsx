@@ -18,6 +18,7 @@ import {
 import { ChatProvider, useChatState } from "@/components/chat/chat-context";
 import { ChatMessages } from "@/components/chat/chat-messages";
 import { ChatInput } from "@/components/chat/chat-input";
+import { filesToUIParts } from "@/components/chat/file-utils";
 import { ScrollableContent } from "@/components/scrollable-content";
 import { EmptyState } from "@/components/empty-state";
 import { KpiCard, KpiGrid, KpiCardLink, SurfaceCard } from "@/components/surface-card";
@@ -344,18 +345,19 @@ function ChatPanel({ onClose }: { onClose: () => void }) {
     stop,
     inputValue,
     setInputValue,
-    mentionedApps,
-    addMentionedApp,
-    removeMentionedApp,
   } = useChatState();
   const isStreaming = status === "streaming" || status === "submitted";
 
   const handleSubmit = useCallback(
-    async (files?: File[]) => {
-      if (!inputValue.trim() && !files?.length) return;
+    async (rawFiles?: File[]) => {
+      if (!inputValue.trim() && !rawFiles?.length) return;
       if (isStreaming) return;
+      const text = inputValue.trim();
       setInputValue("");
-      sendMessage({ text: inputValue.trim() });
+      const files = rawFiles?.length
+        ? await filesToUIParts(rawFiles)
+        : undefined;
+      sendMessage({ text: text || "Attached files", files });
     },
     [inputValue, isStreaming, sendMessage, setInputValue],
   );
@@ -378,19 +380,16 @@ function ChatPanel({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="shrink-0 border-t border-border p-4">
-        <ChatInput
-          value={inputValue}
-          onChange={setInputValue}
-          onSubmit={handleSubmit}
-          onStop={stop}
-          isStreaming={isStreaming}
-          placeholder="How can I help you today?"
-          autoFocus
-          mentionedApps={mentionedApps}
-          onMentionApp={addMentionedApp}
-          onRemoveMention={removeMentionedApp}
-          connectedApps={[]}
-        />
+          <ChatInput
+            value={inputValue}
+            onChange={setInputValue}
+            onSubmit={handleSubmit}
+            onStop={stop}
+            isStreaming={isStreaming}
+            placeholder="How can I help you today?"
+            autoFocus
+            menuPosition="above"
+          />
       </div>
     </div>
   );

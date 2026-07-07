@@ -52,7 +52,11 @@ export const nombaCache = {
     }
   },
 
-  async getOrSet<T>(key: string, ttlSeconds: number, factory: () => Promise<T>): Promise<T> {
+  async getOrSet<T>(
+    key: string,
+    ttlSeconds: number,
+    factory: () => Promise<T>,
+  ): Promise<T> {
     const cached = await this.get(key);
     if (cached !== null) {
       try {

@@ -1,6 +1,11 @@
 import { and, desc, eq, gte, ilike, lt, or, sql } from "drizzle-orm";
 import { db } from "@/config/db";
-import { customers, invoices, transactions, virtualAccounts } from "@/db/schema";
+import {
+  customers,
+  invoices,
+  transactions,
+  virtualAccounts,
+} from "@/db/schema";
 
 type TransactionStatus = "posted" | "pending" | "failed" | "reversed";
 type ReconciliationStatus =
@@ -42,9 +47,17 @@ type CreateFromWebhookParams = {
   eventType?: string | null;
   type?: "credit" | "debit";
   amount: number;
+  platformFee?: number;
+  netAmount?: number;
   currency: string;
   status: "posted" | "pending" | "failed" | "reversed";
-  reconciliationStatus?: "pending" | "matched" | "underpaid" | "overpaid" | "duplicate" | "needs_review";
+  reconciliationStatus?:
+    | "pending"
+    | "matched"
+    | "underpaid"
+    | "overpaid"
+    | "duplicate"
+    | "needs_review";
   senderName?: string | null;
   senderBank?: string | null;
   narration?: string | null;
@@ -109,7 +122,9 @@ export const transactionRepository = {
     }
 
     if (reconciliationStatus) {
-      conditions.push(eq(transactions.reconciliationStatus, reconciliationStatus));
+      conditions.push(
+        eq(transactions.reconciliationStatus, reconciliationStatus),
+      );
     }
 
     if (dateFrom) {
@@ -188,7 +203,10 @@ export const transactionRepository = {
       })
       .from(transactions)
       .leftJoin(customers, eq(transactions.customerId, customers.id))
-      .leftJoin(virtualAccounts, eq(transactions.virtualAccountId, virtualAccounts.id))
+      .leftJoin(
+        virtualAccounts,
+        eq(transactions.virtualAccountId, virtualAccounts.id),
+      )
       .leftJoin(invoices, eq(transactions.invoiceId, invoices.id))
       .where(and(...conditions))
       .orderBy(desc(transactions.occurredAt), desc(transactions.createdAt))
@@ -269,7 +287,10 @@ export const transactionRepository = {
     };
   },
 
-  async findByNombaTransactionId(businessId: string, nombaTransactionId: string) {
+  async findByNombaTransactionId(
+    businessId: string,
+    nombaTransactionId: string,
+  ) {
     const [row] = await db
       .select({ id: transactions.id })
       .from(transactions)
@@ -339,6 +360,8 @@ export const transactionRepository = {
         eventType: params.eventType ?? null,
         type: params.type ?? "credit",
         amount: String(params.amount),
+        platformFee: String(params.platformFee ?? 0),
+        netAmount: String(params.netAmount ?? params.amount),
         currency: params.currency,
         status: params.status,
         reconciliationStatus: params.reconciliationStatus ?? "pending",
@@ -364,7 +387,12 @@ export const transactionRepository = {
         invoiceId,
         reconciliationStatus,
       })
-      .where(and(eq(transactions.id, transactionId), eq(transactions.businessId, businessId)))
+      .where(
+        and(
+          eq(transactions.id, transactionId),
+          eq(transactions.businessId, businessId),
+        ),
+      )
       .returning({ id: transactions.id });
 
     return updated ?? null;
@@ -378,7 +406,12 @@ export const transactionRepository = {
     const [updated] = await db
       .update(transactions)
       .set({ reconciliationStatus })
-      .where(and(eq(transactions.id, transactionId), eq(transactions.businessId, businessId)))
+      .where(
+        and(
+          eq(transactions.id, transactionId),
+          eq(transactions.businessId, businessId),
+        ),
+      )
       .returning({ id: transactions.id });
 
     return updated ?? null;

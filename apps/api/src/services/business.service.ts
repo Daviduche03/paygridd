@@ -23,4 +23,16 @@ export const businessService = {
   }): Promise<Business> {
     return businessRepository.create(data);
   },
+
+  async updateSettlementAccount(
+    id: string,
+    data: {
+      settlementBankName: string;
+      settlementBankCode: string;
+      settlementAccountNumber: string;
+      settlementAccountName: string;
+    },
+  ): Promise<Business | null> {
+    return businessRepository.updateSettlementAccount(id, data);
+  },
 };

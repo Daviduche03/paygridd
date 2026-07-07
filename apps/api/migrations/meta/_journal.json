@@ -71,6 +71,41 @@
       "when": 1783179013239,
       "tag": "0009_unusual_purple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1783303795313,
+      "tag": "0010_kind_dark_phoenix",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1783346690677,
+      "tag": "0011_dark_ricochet",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1783347185108,
+      "tag": "0012_normal_maestro",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1783348159240,
+      "tag": "0013_wide_namorita",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1783435674709,
+      "tag": "0014_wild_archangel",
+      "breakpoints": true
     }
   ]
 }

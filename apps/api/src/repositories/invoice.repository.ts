@@ -1,6 +1,24 @@
-import { and, asc, desc, eq, gte, ilike, inArray, lt, lte, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  lt,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 import { db } from "@/config/db";
-import { businesses, customers, invoices, transactions, virtualAccounts } from "@/db/schema";
+import {
+  businesses,
+  customers,
+  invoices,
+  transactions,
+  virtualAccounts,
+} from "@/db/schema";
 
 type InvoiceStatus =
   | "draft"
@@ -126,7 +144,12 @@ export const invoiceRepository = {
         currency: sql<string>`coalesce(max(${invoices.currency}), 'NGN')`,
       })
       .from(invoices)
-      .where(and(eq(invoices.businessId, businessId), inArray(invoices.status, statuses)));
+      .where(
+        and(
+          eq(invoices.businessId, businessId),
+          inArray(invoices.status, statuses),
+        ),
+      );
 
     return {
       totalAmount: row?.totalAmount ?? 0,
@@ -163,7 +186,9 @@ export const invoiceRepository = {
 
     if (statuses?.length) {
       const hasOverdue = statuses.includes("overdue");
-      const otherStatuses = statuses.filter((status) => status !== "overdue") as InvoiceStatus[];
+      const otherStatuses = statuses.filter(
+        (status) => status !== "overdue",
+      ) as InvoiceStatus[];
 
       if (hasOverdue && otherStatuses.length === 0) {
         conditions.push(
@@ -220,7 +245,10 @@ export const invoiceRepository = {
       .select(invoiceSelect)
       .from(invoices)
       .leftJoin(customers, eq(invoices.customerId, customers.id))
-      .leftJoin(virtualAccounts, eq(invoices.virtualAccountId, virtualAccounts.id))
+      .leftJoin(
+        virtualAccounts,
+        eq(invoices.virtualAccountId, virtualAccounts.id),
+      )
       .where(and(...conditions))
       .orderBy(desc(invoices.createdAt))
       .limit(pageSize + 1);
@@ -237,7 +265,10 @@ export const invoiceRepository = {
       .select(invoiceSelect)
       .from(invoices)
       .leftJoin(customers, eq(invoices.customerId, customers.id))
-      .leftJoin(virtualAccounts, eq(invoices.virtualAccountId, virtualAccounts.id))
+      .leftJoin(
+        virtualAccounts,
+        eq(invoices.virtualAccountId, virtualAccounts.id),
+      )
       .where(and(eq(invoices.businessId, businessId), eq(invoices.id, id)))
       .limit(1);
 
@@ -273,12 +304,20 @@ export const invoiceRepository = {
         occurredAt: transactions.occurredAt,
       })
       .from(transactions)
-      .where(and(eq(transactions.businessId, businessId), eq(transactions.invoiceId, invoiceId)))
+      .where(
+        and(
+          eq(transactions.businessId, businessId),
+          eq(transactions.invoiceId, invoiceId),
+        ),
+      )
       .orderBy(desc(transactions.occurredAt))
       .limit(50);
   },
 
-  async findOpenInvoicesByVirtualAccountId(businessId: string, virtualAccountId: string) {
+  async findOpenInvoicesByVirtualAccountId(
+    businessId: string,
+    virtualAccountId: string,
+  ) {
     return db
       .select({
         id: invoices.id,
@@ -356,7 +395,10 @@ export const invoiceRepository = {
       })
       .from(invoices)
       .leftJoin(customers, eq(invoices.customerId, customers.id))
-      .leftJoin(virtualAccounts, eq(invoices.virtualAccountId, virtualAccounts.id))
+      .leftJoin(
+        virtualAccounts,
+        eq(invoices.virtualAccountId, virtualAccounts.id),
+      )
       .innerJoin(businesses, eq(invoices.businessId, businesses.id))
       .where(eq(invoices.id, id))
       .limit(1);
@@ -364,14 +406,20 @@ export const invoiceRepository = {
     return row ?? null;
   },
 
-  async setVirtualAccount(businessId: string, invoiceId: string, virtualAccountId: string) {
+  async setVirtualAccount(
+    businessId: string,
+    invoiceId: string,
+    virtualAccountId: string,
+  ) {
     const [updated] = await db
       .update(invoices)
       .set({
         virtualAccountId,
         updatedAt: new Date().toISOString(),
       })
-      .where(and(eq(invoices.id, invoiceId), eq(invoices.businessId, businessId)))
+      .where(
+        and(eq(invoices.id, invoiceId), eq(invoices.businessId, businessId)),
+      )
       .returning({ id: invoices.id });
 
     return updated ?? null;
@@ -398,7 +446,12 @@ export const invoiceRepository = {
       const [updated] = await db
         .update(invoices)
         .set(values)
-        .where(and(eq(invoices.id, params.id), eq(invoices.businessId, params.businessId)))
+        .where(
+          and(
+            eq(invoices.id, params.id),
+            eq(invoices.businessId, params.businessId),
+          ),
+        )
         .returning();
 
       if (updated) {

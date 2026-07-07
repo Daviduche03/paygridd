@@ -1,15 +1,25 @@
 import { eq } from "drizzle-orm";
-import { Router } from "express";
-import type { AuthenticatedRequest } from "@/types";
 import type { Response } from "express";
-import { asyncHandler } from "@/utils/asyncHandler";
-import { authenticateApiKey, requireScope } from "@/middleware/api-key-auth.middleware";
-import { transactionRepository } from "@/repositories/transaction.repository";
+import { Router } from "express";
 import { db } from "@/config/db";
 import { transactions } from "@/db/schema";
+import {
+  authenticateApiKey,
+  requireScope,
+} from "@/middleware/api-key-auth.middleware";
+import { transactionRepository } from "@/repositories/transaction.repository";
+import type { AuthenticatedRequest } from "@/types";
+import { asyncHandler } from "@/utils/asyncHandler";
 
-function stripInternalFields<T extends Record<string, unknown>>(tx: T): Omit<T, "nombaTransactionId" | "nombaRequestId" | "eventType"> {
-  const { nombaTransactionId: _, nombaRequestId: __, eventType: ___, ...rest } = tx;
+function stripInternalFields<T extends Record<string, unknown>>(
+  tx: T,
+): Omit<T, "nombaTransactionId" | "nombaRequestId" | "eventType"> {
+  const {
+    nombaTransactionId: _,
+    nombaRequestId: __,
+    eventType: ___,
+    ...rest
+  } = tx;
   return rest as Omit<T, "nombaTransactionId" | "nombaRequestId" | "eventType">;
 }
 
@@ -23,9 +33,17 @@ transactionsRoutes.get(
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { businessId } = req.apiKey!;
     const {
-      cursor, pageSize, q, status, type, customerId,
-      virtualAccountId, reconciliationStatus, dateFrom,
-      amountMin, amountMax,
+      cursor,
+      pageSize,
+      q,
+      status,
+      type,
+      customerId,
+      virtualAccountId,
+      reconciliationStatus,
+      dateFrom,
+      amountMin,
+      amountMax,
     } = req.query as Record<string, string | undefined>;
     const result = await transactionRepository.list({
       businessId,
@@ -41,7 +59,11 @@ transactionsRoutes.get(
       amountMin: amountMin ? Number(amountMin) : undefined,
       amountMax: amountMax ? Number(amountMax) : undefined,
     });
-    res.json({ success: true, data: result.data.map(stripInternalFields), meta: result.meta });
+    res.json({
+      success: true,
+      data: result.data.map(stripInternalFields),
+      meta: result.meta,
+    });
   }),
 );
 

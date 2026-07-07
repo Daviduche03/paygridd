@@ -68,7 +68,13 @@ function resolveDateFrom(dateRange?: string | null) {
   }
 
   const days =
-    dateRange === "7d" ? 7 : dateRange === "30d" ? 30 : dateRange === "90d" ? 90 : null;
+    dateRange === "7d"
+      ? 7
+      : dateRange === "30d"
+        ? 30
+        : dateRange === "90d"
+          ? 90
+          : null;
   if (!days) return null;
 
   from.setDate(from.getDate() - days);
@@ -81,8 +87,10 @@ function resolveAmountRange(amountRange?: string | null) {
   }
 
   if (amountRange === "0-1000") return { amountMin: 0, amountMax: 1000 };
-  if (amountRange === "1000-10000") return { amountMin: 1000, amountMax: 10000 };
-  if (amountRange === "10000-100000") return { amountMin: 10000, amountMax: 100000 };
+  if (amountRange === "1000-10000")
+    return { amountMin: 1000, amountMax: 10000 };
+  if (amountRange === "10000-100000")
+    return { amountMin: 10000, amountMax: 100000 };
   if (amountRange === "100000+") return { amountMin: 100000, amountMax: null };
 
   return { amountMin: null, amountMax: null };
@@ -200,8 +208,12 @@ export const transactionsService = {
         reconciliation: row.reconciliationStatus,
         invoiceId: row.invoiceId,
         invoice: row.invoiceNumber ?? "-",
-        invoiceAmount: row.invoiceAmount != null ? toNumber(row.invoiceAmount) : null,
-        invoiceAmountPaid: row.invoiceAmountPaid != null ? toNumber(row.invoiceAmountPaid) : null,
+        invoiceAmount:
+          row.invoiceAmount != null ? toNumber(row.invoiceAmount) : null,
+        invoiceAmountPaid:
+          row.invoiceAmountPaid != null
+            ? toNumber(row.invoiceAmountPaid)
+            : null,
         date: formatDisplayDate(row.occurredAt ?? row.createdAt),
         occurredAt: row.occurredAt,
       })),

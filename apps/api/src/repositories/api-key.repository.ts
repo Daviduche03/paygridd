@@ -1,6 +1,6 @@
-import { and, eq, inArray, desc, or } from "drizzle-orm";
+import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { db } from "@/config/db";
-import { apiKeys, webhooks, webhookDeliveries } from "@/db/schema";
+import { apiKeys, webhookDeliveries, webhooks } from "@/db/schema";
 
 export interface ApiKey {
   id: string;
@@ -127,7 +127,12 @@ export const apiKeyRepository = {
 
   async updateWebhook(
     id: string,
-    data: { url?: string; description?: string; events?: string[]; active?: boolean },
+    data: {
+      url?: string;
+      description?: string;
+      events?: string[];
+      active?: boolean;
+    },
   ) {
     const [row] = await db
       .update(webhooks)

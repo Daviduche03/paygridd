@@ -1,6 +1,6 @@
+import { eq } from "drizzle-orm";
 import { db } from "@/config/db";
 import { businessKyc } from "@/db/schema";
-import { eq } from "drizzle-orm";
 
 export interface KycRecord {
   id: string;

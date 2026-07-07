@@ -1,18 +1,11 @@
 "use client";
 
-
 import { LogEvents } from "eventbus/events";
 import { cn } from "ui/cn";
 import { Icons } from "ui/icons";
-import { Popover, PopoverContent, PopoverTrigger } from "ui/popover";
 import { useOpenPanel } from "@openpanel/nextjs";
 import { AnimatePresence, motion } from "framer-motion";
-import Image from "@/next/image";
-import { useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ConnectedApp } from "./chat-context";
-
-const MCP_CLIENTS = [] as const;
 
 const SUGGESTION_POOL: Record<string, string[]> = {
   insights: [
@@ -75,82 +68,7 @@ export type ChatInputProps = {
   onEscape?: () => void;
   onSuggestion?: (text: string) => void;
   menuPosition?: "above" | "below";
-  connectedApps?: ConnectedApp[];
-  mentionedApps?: ConnectedApp[];
-  onMentionApp?: (app: ConnectedApp) => void;
-  onRemoveMention?: (slug: string) => void;
 };
-
-function AppLogo({
-  src,
-  name,
-  size = 14,
-}: {
-  src: string | null;
-  name: string;
-  size?: number;
-}) {
-  if (!src) {
-    return (
-      <span
-        className="bg-muted flex items-center justify-center text-[8px] font-medium rounded-sm shrink-0"
-        style={{ width: size, height: size }}
-      >
-        {name.charAt(0).toUpperCase()}
-      </span>
-    );
-  }
-
-  return (
-    <Image
-      src={src}
-      alt={name}
-      width={size}
-      height={size}
-      className="rounded-sm shrink-0"
-      unoptimized
-    />
-  );
-}
-
-function createMentionSpan(app: {
-  slug: string;
-  name: string;
-  logo: string | null;
-}): HTMLSpanElement {
-  const span = document.createElement("span");
-  span.contentEditable = "false";
-  span.dataset.mentionSlug = app.slug;
-  span.dataset.mentionName = app.name;
-  span.className =
-    "inline-flex items-center gap-1 border border-border px-1 text-[11px] text-muted-foreground align-middle mx-0.5 select-none";
-  span.style.lineHeight = "16px";
-  span.style.verticalAlign = "middle";
-
-  if (app.logo) {
-    const img = document.createElement("img");
-    img.src = app.logo;
-    img.alt = app.name;
-    img.width = 12;
-    img.height = 12;
-    img.className = "rounded-sm shrink-0";
-    span.appendChild(img);
-  } else {
-    const initial = document.createElement("span");
-    initial.className =
-      "bg-muted inline-flex items-center justify-center text-[7px] font-medium rounded-sm shrink-0";
-    initial.style.width = "12px";
-    initial.style.height = "12px";
-    initial.textContent = app.name.charAt(0).toUpperCase();
-    span.appendChild(initial);
-  }
-
-  const nameEl = document.createElement("span");
-  nameEl.textContent = app.name;
-  span.appendChild(nameEl);
-
-  return span;
-}
 
 function extractTextValue(el: HTMLElement): string {
   let text = "";
@@ -160,38 +78,13 @@ function extractTextValue(el: HTMLElement): string {
     } else if (node instanceof HTMLBRElement) {
       text += "\n";
     } else if (node instanceof HTMLElement) {
-      if (node.dataset.mentionSlug) {
-        text += `@${node.dataset.mentionName ?? ""}`;
-      } else {
-        if (node.tagName === "DIV" && text.length > 0 && !text.endsWith("\n")) {
-          text += "\n";
-        }
-        text += extractTextValue(node);
+      if (node.tagName === "DIV" && text.length > 0 && !text.endsWith("\n")) {
+        text += "\n";
       }
+      text += extractTextValue(node);
     }
   }
   return text;
-}
-
-function getMentionSlugsFromDOM(el: HTMLElement): string[] {
-  return Array.from(el.querySelectorAll<HTMLElement>("[data-mention-slug]"))
-    .map((span) => span.dataset.mentionSlug!)
-    .filter(Boolean);
-}
-
-function getTextBeforeCursorInEditable(el: HTMLElement): string {
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0) return "";
-
-  const range = sel.getRangeAt(0);
-  const preRange = document.createRange();
-  preRange.selectNodeContents(el);
-  preRange.setEnd(range.startContainer, range.startOffset);
-
-  const fragment = preRange.cloneContents();
-  const temp = document.createElement("div");
-  temp.appendChild(fragment);
-  return extractTextValue(temp);
 }
 
 function AttachmentPreview({
@@ -243,14 +136,9 @@ export function ChatInput({
   onEscape,
   onSuggestion,
   menuPosition = "below",
-  connectedApps,
-  mentionedApps,
-  onMentionApp,
-  onRemoveMention,
 }: ChatInputProps) {
   const editableRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const appsPanelRef = useRef<HTMLDivElement>(null);
   const extractedValueRef = useRef(value);
   const [mounted, setMounted] = useState(false);
 
@@ -259,36 +147,8 @@ export function ChatInput({
   }, []);
   const [suggestions] = useState(pickSuggestions);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [mcpOpen, setMcpOpen] = useState(false);
-  const [showAppsPanel, setShowAppsPanel] = useState(false);
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
-  const [highlightedIndex, setHighlightedIndex] = useState(0);
   const [files, setFiles] = useState<File[]>([]);
-  const [, setSearchParams] = useSearchParams();
-  const setMcpAppParam = (value: string | null) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (value === null) {
-        next.delete("mcp-app");
-      } else {
-        next.set("mcp-app", value);
-      }
-      return next;
-    }, { replace: true });
-  };
   const { track } = useOpenPanel();
-
-  const mentionedSlugs = new Set(mentionedApps?.map((a) => a.slug));
-  const availableApps = connectedApps?.filter(
-    (a) => !mentionedSlugs.has(a.slug),
-  );
-
-  const filteredApps =
-    mentionQuery != null
-      ? availableApps?.filter((a) =>
-          a.name.toLowerCase().startsWith(mentionQuery.toLowerCase()),
-        )
-      : availableApps;
 
   useEffect(() => {
     const el = editableRef.current;
@@ -333,22 +193,6 @@ export function ChatInput({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showSuggestions]);
 
-  useEffect(() => {
-    if (!showAppsPanel) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        appsPanelRef.current &&
-        !appsPanelRef.current.contains(e.target as Node) &&
-        !(e.target as Element).closest("[data-apps-toggle]")
-      ) {
-        setShowAppsPanel(false);
-        setMentionQuery(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showAppsPanel]);
-
   const addFiles = useCallback(
     (incoming: File[]) => {
       const valid = incoming.filter((f) => f.size <= MAX_FILE_SIZE);
@@ -378,82 +222,13 @@ export function ChatInput({
     input.click();
   }, [addFiles]);
 
-  const closeMentionPanel = useCallback(() => {
-    setShowAppsPanel(false);
-    setMentionQuery(null);
-    setHighlightedIndex(0);
-  }, []);
-
-  const insertMention = useCallback(
-    (app: ConnectedApp) => {
-      onMentionApp?.(app);
-
-      const el = editableRef.current;
-      if (!el) {
-        closeMentionPanel();
-        return;
-      }
-
-      const sel = window.getSelection();
-      const mentionSpan = createMentionSpan(app);
-      const spaceNode = document.createTextNode(" ");
-
-      if (mentionQuery != null && sel && sel.rangeCount > 0) {
-        const focusNode = sel.focusNode;
-        const focusOffset = sel.focusOffset;
-
-        if (focusNode && focusNode.nodeType === Node.TEXT_NODE) {
-          const text = focusNode.textContent ?? "";
-          const beforeCursor = text.slice(0, focusOffset);
-          const atIdx = beforeCursor.lastIndexOf("@");
-
-          if (atIdx !== -1) {
-            const beforeAt = text.slice(0, atIdx);
-            const afterCursor = text.slice(focusOffset);
-            const parent = focusNode.parentNode!;
-
-            if (beforeAt) {
-              parent.insertBefore(document.createTextNode(beforeAt), focusNode);
-            }
-            parent.insertBefore(mentionSpan, focusNode);
-            parent.insertBefore(spaceNode, focusNode);
-            if (afterCursor) {
-              parent.insertBefore(
-                document.createTextNode(afterCursor),
-                focusNode,
-              );
-            }
-            parent.removeChild(focusNode);
-          }
-        }
-      } else {
-        el.appendChild(mentionSpan);
-        el.appendChild(spaceNode);
-      }
-
-      const range = document.createRange();
-      range.setStartAfter(spaceNode);
-      range.collapse(true);
-      sel?.removeAllRanges();
-      sel?.addRange(range);
-
-      const newText = extractTextValue(el);
-      extractedValueRef.current = newText;
-      onChange(newText);
-
-      closeMentionPanel();
-      el.focus();
-    },
-    [onMentionApp, mentionQuery, onChange, closeMentionPanel],
-  );
-
   const handleInput = useCallback(() => {
     const el = editableRef.current;
     if (!el) return;
 
     let text = extractTextValue(el);
 
-    if (!text.trim() && getMentionSlugsFromDOM(el).length === 0) {
+    if (!text.trim()) {
       text = "";
       if (el.innerHTML !== "") {
         el.innerHTML = "";
@@ -462,42 +237,7 @@ export function ChatInput({
 
     extractedValueRef.current = text;
     onChange(text);
-
-    if (mentionedApps && onRemoveMention) {
-      const domSlugs = new Set(getMentionSlugsFromDOM(el));
-      for (const app of mentionedApps) {
-        if (!domSlugs.has(app.slug)) {
-          onRemoveMention(app.slug);
-        }
-      }
-    }
-
-    const textBeforeCursor = getTextBeforeCursorInEditable(el);
-    const atIndex = textBeforeCursor.lastIndexOf("@");
-
-    if (
-      atIndex !== -1 &&
-      (atIndex === 0 || /\s/.test(textBeforeCursor[atIndex - 1]!))
-    ) {
-      const query = textBeforeCursor.slice(atIndex + 1);
-      if (!/\s/.test(query)) {
-        setMentionQuery(query);
-        setShowAppsPanel(true);
-        setHighlightedIndex(0);
-        return;
-      }
-    }
-
-    if (mentionQuery != null) {
-      closeMentionPanel();
-    }
-  }, [
-    onChange,
-    mentionedApps,
-    onRemoveMention,
-    mentionQuery,
-    closeMentionPanel,
-  ]);
+  }, [onChange]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -516,27 +256,6 @@ export function ChatInput({
   }, [value, files, isStreaming, onSubmit, onStop]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (showAppsPanel && filteredApps && filteredApps.length > 0) {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setHighlightedIndex((i) => (i + 1) % filteredApps.length);
-        return;
-      }
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setHighlightedIndex(
-          (i) => (i - 1 + filteredApps.length) % filteredApps.length,
-        );
-        return;
-      }
-      if (e.key === "Enter" || e.key === "Tab") {
-        e.preventDefault();
-        const app = filteredApps[highlightedIndex];
-        if (app) insertMention(app);
-        return;
-      }
-    }
-
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -546,16 +265,8 @@ export function ChatInput({
       document.execCommand("insertLineBreak");
     }
     if (e.key === "Escape") {
-      if (showAppsPanel) {
-        closeMentionPanel();
-        return;
-      }
       if (showSuggestions) {
         setShowSuggestions(false);
-        return;
-      }
-      if (mcpOpen) {
-        setMcpOpen(false);
         return;
       }
       editableRef.current?.blur();
@@ -612,60 +323,6 @@ export function ChatInput({
         </div>
       )}
 
-      {showAppsPanel && (
-        <div
-          ref={appsPanelRef}
-          className={cn(
-            "absolute left-0 right-0 bg-[rgba(247,247,247,0.96)] dark:bg-[rgba(19,19,19,0.98)] backdrop-blur-lg max-h-[220px] overflow-y-auto z-30",
-            menuPosition === "above" ? "bottom-full mb-1" : "top-full mt-1",
-          )}
-        >
-          <div className="p-1">
-            <p className="px-2 py-1 text-[10px] text-[#878787]">
-              Connected apps
-            </p>
-            {!connectedApps || connectedApps.length === 0 ? (
-              <div className="px-2 pt-3 pb-4 flex justify-center">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 text-xs text-[#878787] hover:text-foreground transition-colors"
-                  onClick={() => {
-                    closeMentionPanel();
-                    setConnectorsModalOpen(true);
-                  }}
-                >
-                  Connect apps
-                  <Icons.ChevronRight size={12} />
-                </button>
-              </div>
-            ) : filteredApps && filteredApps.length > 0 ? (
-              filteredApps.map((app, i) => (
-                <button
-                  key={app.slug}
-                  type="button"
-                  className={cn(
-                    "flex items-center gap-2 w-full px-2.5 py-2.5 text-xs text-[#666] transition-colors",
-                    i === highlightedIndex
-                      ? "bg-black/5 dark:bg-white/5"
-                      : "hover:bg-black/5 dark:hover:bg-white/5",
-                  )}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => insertMention(app)}
-                  onMouseEnter={() => setHighlightedIndex(i)}
-                >
-                  <AppLogo src={app.logo} name={app.name} />
-                  <span>{app.name}</span>
-                </button>
-              ))
-            ) : (
-              <p className="px-2.5 py-2.5 text-xs text-[#878787]">
-                {mentionQuery ? "No matching apps" : "All apps are mentioned"}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
       {files.length > 0 && (
         <AttachmentPreview files={files} onRemove={removeFile} />
       )}
@@ -708,8 +365,6 @@ export function ChatInput({
             data-suggestions-toggle
             onClick={() => {
               setShowSuggestions(!showSuggestions);
-              setMcpOpen(false);
-              closeMentionPanel();
             }}
             className="flex items-center h-6 cursor-pointer"
           >
@@ -723,85 +378,6 @@ export function ChatInput({
               )}
             />
           </button>
-
-          <button
-            type="button"
-            data-apps-toggle
-            onClick={() => {
-              const next = !showAppsPanel;
-              setShowAppsPanel(next);
-              if (next) {
-                setMentionQuery(null);
-                setHighlightedIndex(0);
-                setShowSuggestions(false);
-                setMcpOpen(false);
-              }
-            }}
-            className={cn(
-              "flex items-center h-6 cursor-pointer text-sm font-medium transition-colors",
-              showAppsPanel
-                ? "text-foreground"
-                : "text-[#878787]/60 hover:text-foreground",
-            )}
-          >
-            @
-          </button>
-
-          <Popover
-            open={mcpOpen}
-            onOpenChange={(open) => {
-              setMcpOpen(open);
-              if (open) {
-                setShowSuggestions(false);
-                closeMentionPanel();
-              }
-            }}
-          >
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className="flex items-center h-6 cursor-pointer"
-              >
-                <Icons.AddLink
-                  size={16}
-                  className={cn(
-                    "-rotate-45 transition-colors",
-                    mcpOpen
-                      ? "text-foreground"
-                      : "text-[#878787]/60 hover:text-foreground",
-                  )}
-                />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent
-              side={menuPosition === "above" ? "top" : "bottom"}
-              align="start"
-              sideOffset={12}
-              className="w-[180px] p-1 bg-[rgba(247,247,247,0.96)] dark:bg-[rgba(19,19,19,0.98)] backdrop-blur-lg border-border shadow-sm"
-            >
-              <p className="px-2 py-1 text-[10px] text-[#878787]">
-                Use PayGrid in
-              </p>
-              {MCP_CLIENTS.map(({ id, name, Logo }) => (
-                <button
-                  key={id}
-                  type="button"
-                  data-track="MCP App Selected"
-                  data-app={name}
-                  className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-[#666] hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                  onClick={() => {
-                    setMcpOpen(false);
-                    setMcpAppParam(id);
-                  }}
-                >
-                  <span className="size-4 overflow-hidden rounded-sm flex-shrink-0 [&_img]:!w-full [&_img]:!h-full [&_svg]:!w-full [&_svg]:!h-full">
-                    <Logo />
-                  </span>
-                  <span>{name}</span>
-                </button>
-              ))}
-            </PopoverContent>
-          </Popover>
         </div>
 
         <button

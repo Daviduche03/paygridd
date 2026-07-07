@@ -1,9 +1,12 @@
-import { Router } from "express";
-import type { AuthenticatedRequest } from "@/types";
 import type { Response } from "express";
-import { asyncHandler } from "@/utils/asyncHandler";
-import { authenticateApiKey, requireScope } from "@/middleware/api-key-auth.middleware";
+import { Router } from "express";
+import {
+  authenticateApiKey,
+  requireScope,
+} from "@/middleware/api-key-auth.middleware";
 import { customerRepository } from "@/repositories/customer.repository";
+import type { AuthenticatedRequest } from "@/types";
+import { asyncHandler } from "@/utils/asyncHandler";
 
 export const customersRoutes = Router();
 
@@ -14,7 +17,10 @@ customersRoutes.get(
   requireScope("customers.read"),
   asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { businessId } = req.apiKey!;
-    const { cursor, pageSize, q, sort } = req.query as Record<string, string | undefined>;
+    const { cursor, pageSize, q, sort } = req.query as Record<
+      string,
+      string | undefined
+    >;
     const result = await customerRepository.list({
       businessId,
       cursor: cursor ?? null,

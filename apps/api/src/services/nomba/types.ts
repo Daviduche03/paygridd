@@ -112,7 +112,12 @@ export type TransactionStatus =
   | "PAYMENT_FAILED"
   | "REVERSED_BY_VENDOR";
 
-export type TransactionSource = "api" | "pos" | "web" | "android_app" | "ios_app";
+export type TransactionSource =
+  | "api"
+  | "pos"
+  | "web"
+  | "android_app"
+  | "ios_app";
 
 export type TransactionType =
   | "withdrawal"
@@ -266,6 +271,29 @@ export type TransactionRequeryResult = {
   sessionId?: string;
   accountNumber?: string;
   bankName?: string;
+};
+
+// ─── Bank Transfer Types ───────────────────────────────────
+
+export type BankTransferRequest = {
+  amount: number;
+  accountNumber: string;
+  bankCode: string;
+  accountName?: string;
+  narration?: string;
+  merchantTxRef?: string;
+};
+
+export type BankTransferResponse = {
+  status: string;
+  transactionRef: string;
+  amount: number;
+  fee: number;
+  narration: string;
+  accountNumber: string;
+  accountName: string;
+  bankName: string;
+  bankCode: string;
 };
 
 // ─── Webhook Types ─────────────────────────────────────────

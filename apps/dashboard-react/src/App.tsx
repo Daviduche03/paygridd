@@ -24,6 +24,7 @@ import SettingsPage from "@/pages/settings";
 import SettingsMembersPage from "@/pages/settings/members";
 import SettingsDeveloperPage from "@/pages/settings/developer";
 import SettingsKycPage from "@/pages/settings/kyc";
+import SettingsPayoutsPage from "@/pages/settings/payouts";
 import OAuthAuthorizePage from "@/pages/oauth/authorize";
 import InvoicePublicPage from "@/pages/invoice-public";
 import { hasAuthToken } from "@/utils/session";
@@ -77,6 +78,7 @@ export default function App() {
             <Route path="/settings/members" element={<SettingsMembersPage />} />
             <Route path="/settings/developer" element={<SettingsDeveloperPage />} />
             <Route path="/settings/kyc" element={<SettingsKycPage />} />
+            <Route path="/settings/payouts" element={<SettingsPayoutsPage />} />
           </Route>
         </Route>
 

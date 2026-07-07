@@ -3,9 +3,9 @@ import { z } from "zod";
 import { customerRepository } from "@/repositories/customer.repository";
 import { invoiceRepository } from "@/repositories/invoice.repository";
 import { customerService } from "@/services/customer.service";
+import { protectedProcedure, stubMutation, t } from "@/trpc/init";
 import { getBusinessIdForUser } from "@/utils/business";
 import { logger } from "@/utils/logger";
-import { protectedProcedure, stubMutation, t } from "@/trpc/init";
 
 const upsertInputSchema = z.object({
   id: z.string().uuid().optional(),
@@ -25,7 +25,10 @@ export const customersRouter = t.router({
     .mutation(async ({ ctx, input }) => {
       const businessId = await getBusinessIdForUser(ctx.user.id);
       if (!businessId) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Business required" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Business required",
+        });
       }
 
       const openInvoiceCount = await invoiceRepository.countOpenByCustomerId(
@@ -44,7 +47,10 @@ export const customersRouter = t.router({
       const deleted = await customerRepository.delete(businessId, input.id);
 
       if (!deleted) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Customer not found",
+        });
       }
 
       return { success: true };
@@ -84,48 +90,56 @@ export const customersRouter = t.router({
       if (!businessId) return null;
       return customerRepository.findById(businessId, input.id);
     }),
-  getByPortalId: protectedProcedure.input(z.object({ portalId: z.string() })).query(async () => null),
-  getInvoiceSummary: protectedProcedure.input(z.object({ customerId: z.string() })).query(async () => null),
-  getPortalInvoices: protectedProcedure.input(z.object({ customerId: z.string() })).query(async () => null),
+  getByPortalId: protectedProcedure
+    .input(z.object({ portalId: z.string() }))
+    .query(async () => null),
+  getInvoiceSummary: protectedProcedure
+    .input(z.object({ customerId: z.string() }))
+    .query(async () => null),
+  getPortalInvoices: protectedProcedure
+    .input(z.object({ customerId: z.string() }))
+    .query(async () => null),
   togglePortal: stubMutation(z.object({ id: z.string() })),
-  upsert: protectedProcedure.input(upsertInputSchema.passthrough()).mutation(async ({ ctx, input }) => {
-    const businessId = await getBusinessIdForUser(ctx.user.id);
-    if (!businessId) {
-      throw new Error("Business required");
-    }
-
-    const isNew = !input.id;
-
-    const customer = await customerRepository.upsert({
-      businessId,
-      id: input.id,
-      name: input.name,
-      email: input.email ?? null,
-      phone: input.phone ?? null,
-      billingEmail: input.billingEmail ?? null,
-      country: input.country ?? null,
-      countryCode: input.countryCode ?? null,
-    });
-
-    if (!customer) {
-      throw new Error("Failed to save customer");
-    }
-
-    if (isNew) {
-      try {
-        await customerService.provisionStaticVirtualAccount(businessId, {
-          id: customer.id,
-          name: customer.name,
-        });
-      } catch (error) {
-        logger.error("Customer created without static virtual account", {
-          customerId: customer.id,
-          businessId,
-          error,
-        });
+  upsert: protectedProcedure
+    .input(upsertInputSchema.passthrough())
+    .mutation(async ({ ctx, input }) => {
+      const businessId = await getBusinessIdForUser(ctx.user.id);
+      if (!businessId) {
+        throw new Error("Business required");
       }
-    }
 
-    return customer;
-  }),
+      const isNew = !input.id;
+
+      const customer = await customerRepository.upsert({
+        businessId,
+        id: input.id,
+        name: input.name,
+        email: input.email ?? null,
+        phone: input.phone ?? null,
+        billingEmail: input.billingEmail ?? null,
+        country: input.country ?? null,
+        countryCode: input.countryCode ?? null,
+      });
+
+      if (!customer) {
+        throw new Error("Failed to save customer");
+      }
+
+      if (isNew) {
+        try {
+          await customerService.provisionStaticVirtualAccount(businessId, {
+            id: customer.id,
+            name: customer.name,
+          });
+        } catch (error) {
+          logger.error("Customer created without static virtual account", {
+            customerId: customer.id,
+            businessId,
+            error,
+          });
+        }
+      }
+
+      return customer;
+    }),
 });

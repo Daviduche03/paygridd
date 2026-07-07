@@ -1,6 +1,6 @@
+import { eq } from "drizzle-orm";
 import { db } from "@/config/db";
 import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
 
 export interface User {
   id: string;
@@ -22,7 +22,10 @@ export const userRepository = {
     return (user as User) || null;
   },
 
-  async update(id: string, data: Record<string, unknown>): Promise<User | null> {
+  async update(
+    id: string,
+    data: Record<string, unknown>,
+  ): Promise<User | null> {
     const allowedColumns = ["fullName", "avatarUrl"];
     const setData: Record<string, unknown> = {};
 
@@ -44,10 +47,7 @@ export const userRepository = {
   },
 
   async switchBusiness(id: string, businessId: string): Promise<void> {
-    await db
-      .update(users)
-      .set({ businessId })
-      .where(eq(users.id, id));
+    await db.update(users).set({ businessId }).where(eq(users.id, id));
   },
 
   async findByEmail(email: string): Promise<User | null> {
@@ -81,4 +81,3 @@ export const userRepository = {
     return newUser as User;
   },
 };
-

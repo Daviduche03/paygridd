@@ -39,10 +39,11 @@ async function persistNombaAccount(
   nombaAccount: VirtualAccountObject,
   params: PersistParams,
 ) {
-  const existing = await virtualAccountRepository.findByBusinessAndAccountNumber(
-    businessId,
-    nombaAccount.bankAccountNumber,
-  );
+  const existing =
+    await virtualAccountRepository.findByBusinessAndAccountNumber(
+      businessId,
+      nombaAccount.bankAccountNumber,
+    );
 
   const expectedAmount =
     params.expectedAmount != null ? String(params.expectedAmount) : null;
@@ -146,10 +147,17 @@ export const virtualAccountService = {
       return existing;
     }
 
-    const rawName = `${params.customerName} ${params.invoiceNumber}`.replace(/[^a-zA-Z ]/g, "").trim();
-    const accountName = rawName || params.customerName.replace(/[^a-zA-Z ]/g, "").trim() || "Invoice Payment";
+    const rawName = `${params.customerName} ${params.invoiceNumber}`
+      .replace(/[^a-zA-Z ]/g, "")
+      .trim();
+    const accountName =
+      rawName ||
+      params.customerName.replace(/[^a-zA-Z ]/g, "").trim() ||
+      "Invoice Payment";
     const expectedAmount = params.amount > 0 ? params.amount : undefined;
-    const expiryDate = isSandbox() ? undefined : resolveDynamicExpiryDate(params.dueDate);
+    const expiryDate = isSandbox()
+      ? undefined
+      : resolveDynamicExpiryDate(params.dueDate);
 
     return createOnNomba({
       businessId: params.businessId,

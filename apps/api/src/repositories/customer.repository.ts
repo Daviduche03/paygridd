@@ -48,7 +48,13 @@ function mapListRow(row: {
 }
 
 export const customerRepository = {
-  async list({ businessId, pageSize = 25, cursor, q, sort }: ListCustomersParams) {
+  async list({
+    businessId,
+    pageSize = 25,
+    cursor,
+    q,
+    sort,
+  }: ListCustomersParams) {
     const conditions = [eq(customers.businessId, businessId)];
 
     if (q) {
@@ -121,7 +127,12 @@ export const customerRepository = {
           countryCode: params.countryCode ?? null,
           updatedAt: new Date().toISOString(),
         })
-        .where(and(eq(customers.id, params.id), eq(customers.businessId, params.businessId)))
+        .where(
+          and(
+            eq(customers.id, params.id),
+            eq(customers.businessId, params.businessId),
+          ),
+        )
         .returning();
 
       if (!updated) return null;

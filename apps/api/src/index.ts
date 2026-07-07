@@ -1,8 +1,8 @@
 import type { inferRouterOutputs } from "@trpc/server";
-import { createApp } from "./app";
 import { env } from "@/config/env";
-import { logger } from "@/utils/logger";
 import type { AppRouter } from "@/trpc/router";
+import { logger } from "@/utils/logger";
+import { createApp } from "./app";
 
 export type { AppRouter };
 export type RouterOutputs = inferRouterOutputs<AppRouter>;

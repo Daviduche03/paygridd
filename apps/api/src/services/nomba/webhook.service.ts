@@ -1,20 +1,23 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { env } from "@/config/env";
+import { businessRepository } from "@/repositories/business.repository";
+import { customerRepository } from "@/repositories/customer.repository";
+import { invoiceRepository } from "@/repositories/invoice.repository";
 import { transactionRepository } from "@/repositories/transaction.repository";
 import { virtualAccountRepository } from "@/repositories/virtual-account.repository";
 import { webhookEventRepository } from "@/repositories/webhook-event.repository";
-import { customerRepository } from "@/repositories/customer.repository";
-import { businessRepository } from "@/repositories/business.repository";
-import { invoiceRepository } from "@/repositories/invoice.repository";
-import { reconciliationService } from "@/services/reconciliation.service";
 import { emailService } from "@/services/email.service";
+import { reconciliationService } from "@/services/reconciliation.service";
 import type {
   NombaWebhookHeaders,
   NombaWebhookPayload,
   StoredNombaWebhookEvent,
 } from "@/types/nomba-webhook";
 
-function buildHashingPayload(payload: NombaWebhookPayload, timestamp: string): string {
+function buildHashingPayload(
+  payload: NombaWebhookPayload,
+  timestamp: string,
+): string {
   const merchant = payload.data?.merchant;
   const transaction = payload.data?.transaction;
 
@@ -36,7 +39,11 @@ function buildHashingPayload(payload: NombaWebhookPayload, timestamp: string): s
   ].join(":");
 }
 
-function generateSignature(payload: NombaWebhookPayload, secret: string, timestamp: string): string {
+function generateSignature(
+  payload: NombaWebhookPayload,
+  secret: string,
+  timestamp: string,
+): string {
   const hashingPayload = buildHashingPayload(payload, timestamp);
   return createHmac("sha256", secret).update(hashingPayload).digest("base64");
 }
@@ -96,9 +103,10 @@ async function persistToDatabase(payload: NombaWebhookPayload) {
   const customer = payload.data?.customer;
   if (!transaction) return null;
 
-  const identifiers = [transaction.aliasAccountNumber, transaction.aliasAccountReference].filter(
-    Boolean,
-  ) as string[];
+  const identifiers = [
+    transaction.aliasAccountNumber,
+    transaction.aliasAccountReference,
+  ].filter(Boolean) as string[];
 
   let account = null;
   for (const identifier of identifiers) {
@@ -110,6 +118,14 @@ async function persistToDatabase(payload: NombaWebhookPayload) {
 
   const isSuccess = payload.event_type.includes("success");
   const nombaTransactionId = transaction.transactionId ?? payload.requestId;
+  const amount = transaction.transactionAmount ?? 0;
+
+  const [business] = await Promise.all([
+    businessRepository.findById(account.businessId),
+  ]);
+  const rate = Number(business?.platformChargeRate ?? 0);
+  const platformFee = rate > 0 ? Math.round(amount * rate) / 100 : 0;
+  const netAmount = amount - platformFee;
 
   const created = await transactionRepository.createFromWebhook({
     businessId: account.businessId,
@@ -119,39 +135,76 @@ async function persistToDatabase(payload: NombaWebhookPayload) {
     nombaRequestId: payload.requestId,
     eventType: payload.event_type,
     type: "credit",
-    amount: transaction.transactionAmount ?? 0,
+    amount,
+    platformFee,
+    netAmount,
     currency: "NGN",
-    status: isSuccess ? "posted" : transaction.type === "debit" ? "failed" : "pending",
-    senderName: customer?.senderName ?? transaction.aliasAccountName ?? account.accountName,
+    status: isSuccess
+      ? "posted"
+      : transaction.type === "debit"
+        ? "failed"
+        : "pending",
+    senderName:
+      customer?.senderName ??
+      transaction.aliasAccountName ??
+      account.accountName,
     senderBank: customer?.bankName ?? null,
     narration: transaction.narration ?? null,
     occurredAt: resolveOccurredAt(transaction.time),
   });
 
   if (isSuccess && created?.id && account.id) {
-    const invoiceId = await reconciliationService.reconcileVirtualAccountPayment({
-      businessId: account.businessId,
-      virtualAccountId: account.id,
-      transactionId: created.id,
-      amount: transaction.transactionAmount ?? 0,
-    });
+    const result =
+      await reconciliationService.reconcileVirtualAccountPayment({
+        businessId: account.businessId,
+        virtualAccountId: account.id,
+        transactionId: created.id,
+        amount: transaction.transactionAmount ?? 0,
+      });
 
-    if (invoiceId && account.customerId) {
+    if (result?.invoiceId && account.customerId) {
       const [customer, business] = await Promise.all([
         customerRepository.findById(account.businessId, account.customerId),
         businessRepository.findById(account.businessId),
       ]);
-      const customerEmail = customer?.billingEmail ?? customer?.email ?? undefined;
+      const customerEmail =
+        customer?.billingEmail ?? customer?.email ?? undefined;
       if (customerEmail && business?.name && customer) {
-        const paidInvoice = await invoiceRepository.findById(account.businessId, invoiceId);
-        emailService.sendPaymentConfirmation({
-          to: customerEmail,
-          customerName: customer.name ?? customerEmail,
-          businessName: business.name,
-          invoiceNumber: paidInvoice?.invoiceNumber ?? "",
-          amount: new Intl.NumberFormat("en-NG", { minimumFractionDigits: 2 }).format(transaction.transactionAmount ?? 0),
-          paidAt: new Date().toLocaleString("en-NG"),
-        }).catch(() => {});
+        const paidInvoice = await invoiceRepository.findById(
+          account.businessId,
+          result.invoiceId,
+        );
+        const fmt = (n: number) =>
+          new Intl.NumberFormat("en-NG", {
+            minimumFractionDigits: 2,
+          }).format(n);
+
+        if (result.excess && result.excess > 0) {
+          emailService
+            .sendOverpaymentNotification({
+              to: customerEmail,
+              customerName: customer.name ?? customerEmail,
+              businessName: business.name,
+              invoiceNumber: paidInvoice?.invoiceNumber ?? "",
+              amountPaid: fmt(transaction.transactionAmount ?? 0),
+              invoiceAmount: fmt(
+                paidInvoice ? Number(paidInvoice.amount) : 0,
+              ),
+              excessAmount: fmt(result.excess),
+            })
+            .catch(() => {});
+        } else {
+          emailService
+            .sendPaymentConfirmation({
+              to: customerEmail,
+              customerName: customer.name ?? customerEmail,
+              businessName: business.name,
+              invoiceNumber: paidInvoice?.invoiceNumber ?? "",
+              amount: fmt(transaction.transactionAmount ?? 0),
+              paidAt: new Date().toLocaleString("en-NG"),
+            })
+            .catch(() => {});
+        }
       }
     }
   }
@@ -169,21 +222,33 @@ export class NombaWebhookError extends Error {
 }
 
 export const nombaWebhookService = {
-  verifySignature(payload: NombaWebhookPayload, headers: NombaWebhookHeaders): boolean {
+  verifySignature(
+    payload: NombaWebhookPayload,
+    headers: NombaWebhookHeaders,
+  ): boolean {
     const secret = env.NOMBA_WEBHOOK_SECRET;
     if (!secret) {
       if (env.NODE_ENV === "development") {
         return true;
       }
-      throw new NombaWebhookError("NOMBA_WEBHOOK_SECRET is not configured", 500);
+      throw new NombaWebhookError(
+        "NOMBA_WEBHOOK_SECRET is not configured",
+        500,
+      );
     }
 
     if (!headers.signature || !headers.timestamp) {
-      throw new NombaWebhookError("Missing nomba-signature or nomba-timestamp header", 401);
+      throw new NombaWebhookError(
+        "Missing nomba-signature or nomba-timestamp header",
+        401,
+      );
     }
 
     if (headers.algorithm && headers.algorithm !== "HmacSHA256") {
-      throw new NombaWebhookError(`Unsupported signature algorithm: ${headers.algorithm}`, 401);
+      throw new NombaWebhookError(
+        `Unsupported signature algorithm: ${headers.algorithm}`,
+        401,
+      );
     }
 
     const expected = generateSignature(payload, secret, headers.timestamp);
@@ -203,7 +268,9 @@ export const nombaWebhookService = {
       throw new NombaWebhookError("Invalid webhook signature", 401);
     }
 
-    const alreadyProcessed = await webhookEventRepository.exists(payload.requestId);
+    const alreadyProcessed = await webhookEventRepository.exists(
+      payload.requestId,
+    );
     if (alreadyProcessed) {
       return toStoredEvent(payload, "duplicate");
     }

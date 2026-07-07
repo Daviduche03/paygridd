@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { roleProtectedProcedure, t } from "@/trpc/init";
 import { apiKeyService } from "@/services/api-key.service";
+import { roleProtectedProcedure, t } from "@/trpc/init";
 
 const scopeSchema = z.enum([
   "transactions.read",

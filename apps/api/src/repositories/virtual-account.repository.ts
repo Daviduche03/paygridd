@@ -93,7 +93,14 @@ export const virtualAccountRepository = {
     };
   },
 
-  async list({ businessId, pageSize = 50, cursor, q, status, customerId }: ListParams) {
+  async list({
+    businessId,
+    pageSize = 50,
+    cursor,
+    q,
+    status,
+    customerId,
+  }: ListParams) {
     const conditions = [eq(virtualAccounts.businessId, businessId)];
 
     if (status) {
@@ -197,7 +204,12 @@ export const virtualAccountRepository = {
       })
       .from(virtualAccounts)
       .leftJoin(customers, eq(virtualAccounts.customerId, customers.id))
-      .where(and(eq(virtualAccounts.businessId, businessId), eq(virtualAccounts.id, id)))
+      .where(
+        and(
+          eq(virtualAccounts.businessId, businessId),
+          eq(virtualAccounts.id, id),
+        ),
+      )
       .limit(1);
 
     return row ?? null;
@@ -242,7 +254,12 @@ export const virtualAccountRepository = {
     const [row] = await db
       .select()
       .from(virtualAccounts)
-      .where(and(eq(virtualAccounts.businessId, businessId), eq(virtualAccounts.accountRef, accountRef)))
+      .where(
+        and(
+          eq(virtualAccounts.businessId, businessId),
+          eq(virtualAccounts.accountRef, accountRef),
+        ),
+      )
       .limit(1);
 
     return row ?? null;
@@ -256,7 +273,10 @@ export const virtualAccountRepository = {
       .orderBy(desc(virtualAccounts.createdAt));
   },
 
-  async findByBusinessAndAccountNumber(businessId: string, accountNumber: string) {
+  async findByBusinessAndAccountNumber(
+    businessId: string,
+    accountNumber: string,
+  ) {
     const [row] = await db
       .select()
       .from(virtualAccounts)

@@ -1,6 +1,6 @@
-import { Router } from "express";
 import fs from "node:fs";
 import path from "node:path";
+import { Router } from "express";
 import multer from "multer";
 import { authMiddleware } from "@/middleware/auth.middleware";
 
@@ -27,19 +27,24 @@ const upload = multer({
 
 export const filesRoutes = Router();
 
-filesRoutes.post("/upload", authMiddleware, upload.single("file") as any, (req, res) => {
-  if (!req.file) {
-    res.status(400).json({ success: false, error: "No file uploaded" });
-    return;
-  }
+filesRoutes.post(
+  "/upload",
+  authMiddleware,
+  upload.single("file") as any,
+  (req, res) => {
+    if (!req.file) {
+      res.status(400).json({ success: false, error: "No file uploaded" });
+      return;
+    }
 
-  res.json({
-    success: true,
-    data: {
-      path: req.file.filename,
-    },
-  });
-});
+    res.json({
+      success: true,
+      data: {
+        path: req.file.filename,
+      },
+    });
+  },
+);
 
 filesRoutes.get("/download/:filename", authMiddleware, (req, res) => {
   const filename = path.basename(req.params.filename!);

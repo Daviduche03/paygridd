@@ -1,10 +1,13 @@
-import { Router } from "express";
-import type { AuthenticatedRequest } from "@/types";
 import type { Response } from "express";
-import { asyncHandler } from "@/utils/asyncHandler";
-import { authenticateApiKey, requireScope } from "@/middleware/api-key-auth.middleware";
+import { Router } from "express";
+import {
+  authenticateApiKey,
+  requireScope,
+} from "@/middleware/api-key-auth.middleware";
 import { apiKeyRepository } from "@/repositories/api-key.repository";
 import { apiKeyService } from "@/services/api-key.service";
+import type { AuthenticatedRequest } from "@/types";
+import { asyncHandler } from "@/utils/asyncHandler";
 
 export const webhooksRoutes = Router();
 
@@ -100,7 +103,10 @@ webhooksRoutes.put(
     }
     const { url, description, events, active } = req.body;
     const updated = await apiKeyRepository.updateWebhook(id, {
-      url, description, events, active,
+      url,
+      description,
+      events,
+      active,
     });
     res.json({ success: true, data: updated });
   }),

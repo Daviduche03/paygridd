@@ -38,7 +38,10 @@ type MatchDecision =
   | { kind: "ambiguous"; reason: "duplicate_amount" | "no_exact_match" }
   | { kind: "no_balance" };
 
-function decideMatch(openInvoices: OpenInvoice[], paymentAmount: number): MatchDecision {
+function decideMatch(
+  openInvoices: OpenInvoice[],
+  paymentAmount: number,
+): MatchDecision {
   const payable = openInvoices
     .map((invoice) => ({ invoice, remaining: remainingDue(invoice) }))
     .filter(({ remaining }) => remaining > 0);
@@ -47,7 +50,9 @@ function decideMatch(openInvoices: OpenInvoice[], paymentAmount: number): MatchD
     return { kind: "no_balance" };
   }
 
-  const exactMatches = payable.filter(({ remaining }) => amountsEqual(remaining, paymentAmount));
+  const exactMatches = payable.filter(({ remaining }) =>
+    amountsEqual(remaining, paymentAmount),
+  );
 
   if (exactMatches.length === 1) {
     return { kind: "exact", invoice: exactMatches[0]!.invoice };
@@ -68,7 +73,10 @@ function decideMatch(openInvoices: OpenInvoice[], paymentAmount: number): MatchD
   return { kind: "ambiguous", reason: "no_exact_match" };
 }
 
-function deriveReconciliationStatus(remaining: number, paymentAmount: number): ReconciliationStatus {
+function deriveReconciliationStatus(
+  remaining: number,
+  paymentAmount: number,
+): ReconciliationStatus {
   if (amountsEqual(paymentAmount, remaining)) {
     return "matched";
   }
@@ -84,13 +92,19 @@ async function applyPaymentToInvoice(params: {
   invoice: OpenInvoice;
   paymentAmount: number;
   remaining: number;
-}) {
+}): Promise<{
+  invoiceId: string;
+  reconciliationStatus: ReconciliationStatus;
+  excess: number;
+}> {
   const total = toNumber(params.invoice.amount);
   const reconciliationStatus = deriveReconciliationStatus(
     params.remaining,
     params.paymentAmount,
   );
-  const newPaid = toNumber(params.invoice.amountPaid) + params.paymentAmount;
+  const isOverpaid = reconciliationStatus === "overpaid";
+  const excess = isOverpaid ? params.paymentAmount - params.remaining : 0;
+  const newPaid = isOverpaid ? total : toNumber(params.invoice.amountPaid) + params.paymentAmount;
   const isFullyPaid = newPaid >= total;
 
   await invoiceRepository.upsert({
@@ -102,7 +116,9 @@ async function applyPaymentToInvoice(params: {
     amount: total,
     amountPaid: newPaid,
     currency: params.invoice.currency,
-    status: isFullyPaid ? "paid" : (params.invoice.status as "unpaid" | "overdue" | "scheduled"),
+    status: isFullyPaid
+      ? "paid"
+      : (params.invoice.status as "unpaid" | "overdue" | "scheduled"),
     issueDate: params.invoice.issueDate,
     dueDate: params.invoice.dueDate,
     lineItems: params.invoice.lineItems,
@@ -116,7 +132,7 @@ async function applyPaymentToInvoice(params: {
     reconciliationStatus,
   );
 
-  return params.invoice.id;
+  return { invoiceId: params.invoice.id, reconciliationStatus, excess };
 }
 
 async function reconcileDynamicPayment(params: {
@@ -124,11 +140,16 @@ async function reconcileDynamicPayment(params: {
   virtualAccountId: string;
   transactionId: string;
   amount: number;
-}) {
-  const openInvoices = await invoiceRepository.findOpenInvoicesByVirtualAccountId(
-    params.businessId,
-    params.virtualAccountId,
-  );
+}): Promise<{
+  invoiceId: string | null;
+  reconciliationStatus?: ReconciliationStatus;
+  excess?: number;
+}> {
+  const openInvoices =
+    await invoiceRepository.findOpenInvoicesByVirtualAccountId(
+      params.businessId,
+      params.virtualAccountId,
+    );
 
   if (openInvoices.length === 0) {
     await transactionRepository.setReconciliationStatus(
@@ -155,7 +176,7 @@ async function reconcileDynamicPayment(params: {
     await transactionRepository.setReconciliationStatus(
       params.businessId,
       params.transactionId,
-      "needs_review",
+      "duplicate",
     );
     return null;
   }
@@ -175,7 +196,11 @@ async function reconcileStaticPayment(params: {
   customerId: string | null;
   transactionId: string;
   amount: number;
-}) {
+}): Promise<{
+  invoiceId: string | null;
+  reconciliationStatus?: ReconciliationStatus;
+  excess?: number;
+}> {
   const openInvoices = params.customerId
     ? await invoiceRepository.findOpenInvoicesByCustomerId(
         params.businessId,
@@ -192,7 +217,7 @@ async function reconcileStaticPayment(params: {
     await transactionRepository.setReconciliationStatus(
       params.businessId,
       params.transactionId,
-      "needs_review",
+      openInvoices.length > 0 ? "duplicate" : "needs_review",
     );
     return null;
   }
@@ -225,7 +250,11 @@ export const reconciliationService = {
     virtualAccountId: string;
     transactionId: string;
     amount: number;
-  }) {
+  }): Promise<{
+    invoiceId: string | null;
+    reconciliationStatus?: ReconciliationStatus;
+    excess?: number;
+  }> {
     const account = await virtualAccountRepository.findById(
       params.businessId,
       params.virtualAccountId,

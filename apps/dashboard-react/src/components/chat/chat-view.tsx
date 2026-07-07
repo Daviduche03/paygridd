@@ -5,7 +5,6 @@ import { useOpenPanel } from "@openpanel/nextjs";
 import { AnimatePresence, motion } from "framer-motion";
 import type React from "react";
 import { useCallback, useEffect } from "react";
-import type { ConnectedApp } from "@/components/chat/chat-context";
 import { useChatState } from "@/components/chat/chat-context";
 import { ChatInput } from "@/components/chat/chat-input";
 import { ChatInvoiceCanvas } from "@/components/chat/chat-invoice-canvas";
@@ -30,10 +29,6 @@ export function InputBar({
   onEscape,
   onSuggestion,
   menuPosition,
-  connectedApps,
-  mentionedApps,
-  onMentionApp,
-  onRemoveMention,
 }: {
   isActive?: boolean;
   hasMessages?: boolean;
@@ -45,10 +40,6 @@ export function InputBar({
   onEscape?: () => void;
   onSuggestion?: (text: string) => void;
   menuPosition?: "above" | "below";
-  connectedApps?: ConnectedApp[];
-  mentionedApps?: ConnectedApp[];
-  onMentionApp?: (app: ConnectedApp) => void;
-  onRemoveMention?: (slug: string) => void;
 }) {
   return (
     <div className="bg-[rgba(247,247,247,0.85)] dark:bg-[rgba(19,19,19,0.7)] backdrop-blur-lg">
@@ -63,10 +54,6 @@ export function InputBar({
         onEscape={onEscape}
         onSuggestion={onSuggestion}
         menuPosition={menuPosition}
-        connectedApps={connectedApps}
-        mentionedApps={mentionedApps}
-        onMentionApp={onMentionApp}
-        onRemoveMention={onRemoveMention}
       />
     </div>
   );
@@ -83,10 +70,6 @@ export function ChatView({ header }: { header?: React.ReactNode }) {
     setInputValue,
     rateLimit,
     rateLimitExceeded,
-    mentionedApps,
-    addMentionedApp,
-    removeMentionedApp,
-    clearMentionedApps,
   } = useChatState();
   const { track } = useOpenPanel();
 
@@ -120,13 +103,12 @@ export function ChatView({ header }: { header?: React.ReactNode }) {
       if (isStreaming) return;
       const text = inputValue.trim();
       setInputValue("");
-      clearMentionedApps();
       const files = rawFiles?.length
         ? await filesToUIParts(rawFiles)
         : undefined;
       sendMessage({ text: text || "Attached files", files });
     },
-    [inputValue, isStreaming, sendMessage, setInputValue, clearMentionedApps],
+    [inputValue, isStreaming, sendMessage, setInputValue],
   );
 
   return (
@@ -199,9 +181,6 @@ export function ChatView({ header }: { header?: React.ReactNode }) {
             onSubmit={handleSubmit}
             onStop={stop}
             menuPosition="above"
-            mentionedApps={mentionedApps}
-            onMentionApp={addMentionedApp}
-            onRemoveMention={removeMentionedApp}
             onSuggestion={(text) => {
               track(LogEvents.AssistantSuggestionUsed.name, {
                 suggestion: text,

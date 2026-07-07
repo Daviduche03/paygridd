@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "ui/use-toast";
 import {
@@ -20,6 +20,7 @@ import {
 import { Badge } from "ui/badge";
 import { Button } from "ui/button";
 import { Icons } from "ui/icons";
+import { Skeleton } from "ui/skeleton";
 import { useTRPC } from "@/trpc/client";
 import { format } from "date-fns";
 import { useState } from "react";
@@ -94,12 +95,35 @@ function ProfileTab({ customerId }: { customerId: string }) {
 }
 
 function VirtualAccountTab({ customerId }: { customerId: string }) {
+  const trpc = useTRPC();
   const [showAssign, setShowAssign] = useState(false);
 
-  const virtualAccounts = [
-    { id: "1", accountNumber: "1234567890", bank: "GTBank", currency: "NGN", status: "active" as const },
-    { id: "2", accountNumber: "0987654321", bank: "Access Bank", currency: "NGN", status: "active" as const },
-  ];
+  const { data, isLoading } = useQuery({
+    ...trpc.virtualAccounts.list.queryOptions({ customerId, pageSize: 50 }),
+    enabled: Boolean(customerId),
+  });
+
+  const virtualAccounts = data?.data ?? [];
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-8 w-20" />
+        </div>
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center justify-between border border-border p-3">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+            <Skeleton className="h-5 w-14 rounded-full" />
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -140,7 +164,7 @@ function VirtualAccountTab({ customerId }: { customerId: string }) {
               className="flex items-center justify-between border border-border p-3"
             >
               <div>
-                <p className="text-sm font-medium">{va.bank}</p>
+                <p className="text-sm font-medium">{va.bankName || va.accountName}</p>
                 <p className="text-xs text-muted-foreground">
                   {va.accountNumber} · {va.currency}
                 </p>
@@ -207,7 +231,7 @@ function PaymentHistoryTab({ customerId }: { customerId: string }) {
             </TableCell>
             <TableCell className="text-sm">
               {inv.issueDate
-                ? format(new Date(inv.issueDate), "MMM d, yyyy")
+                ? (() => { try { return format(new Date(inv.issueDate), "MMM d, yyyy"); } catch { return "-"; } })()
                 : "-"}
             </TableCell>
             <TableCell className="text-sm">
@@ -236,30 +260,66 @@ function PaymentHistoryTab({ customerId }: { customerId: string }) {
 }
 
 function StatementsTab({ customerId }: { customerId: string }) {
-  const statements = [
-    {
-      id: "1",
-      period: "January 2026",
-      generatedAt: "2026-02-01",
-      totalAmount: 1250000,
-      currency: "NGN",
-    },
-    {
-      id: "2",
-      period: "December 2025",
-      generatedAt: "2026-01-01",
-      totalAmount: 980000,
-      currency: "NGN",
-    },
-  ];
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: statements, isLoading } = useQuery({
+    ...trpc.statements.list.queryOptions({ customerId }),
+    enabled: Boolean(customerId),
+  });
+
+  const generateMutation = useMutation(
+    trpc.statements.generate.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: trpc.statements.list.queryKey({ customerId }) });
+        toast({ title: "Statement generated" });
+      },
+      onError: (err) => {
+        toast({ title: "Failed to generate statement", description: err.message, variant: "destructive" });
+      },
+    }),
+  );
+
+  const handleGenerate = () => {
+    const now = new Date();
+    const periodStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const periodEnd = now.toISOString();
+    generateMutation.mutate({ customerId, periodStart, periodEnd });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2].map((i) => (
+          <div key={i} className="flex items-center justify-between border border-border p-3">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="size-8 rounded" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Account statements for this customer
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Account statements for this customer
+        </p>
+        <Button size="sm" onClick={handleGenerate} disabled={generateMutation.isPending}>
+          <Icons.Add className="size-4 mr-1" />
+          {generateMutation.isPending ? "Generating..." : "Generate"}
+        </Button>
+      </div>
 
-      {statements.length > 0 ? (
+      {statements && statements.length > 0 ? (
         <div className="space-y-2">
           {statements.map((stmt) => (
             <div
@@ -267,14 +327,16 @@ function StatementsTab({ customerId }: { customerId: string }) {
               className="flex items-center justify-between border border-border p-3"
             >
               <div>
-                <p className="text-sm font-medium">{stmt.period}</p>
+                <p className="text-sm font-medium">
+                  {format(new Date(stmt.periodStart), "MMM yyyy")} - {format(new Date(stmt.periodEnd), "MMM yyyy")}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  Generated {stmt.generatedAt}
+                  Generated {format(new Date(stmt.generatedAt), "MMM d, yyyy")} · {stmt.invoiceCount} invoices
                 </p>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium tabular-nums">
-                  <FormatAmount amount={stmt.totalAmount} currency={stmt.currency} />
+                  <FormatAmount amount={Number(stmt.totalInvoiced)} currency="NGN" />
                 </span>
                 <Button variant="outline" size="icon" className="size-8">
                   <Icons.ArrowCoolDown className="size-4" />
@@ -285,7 +347,7 @@ function StatementsTab({ customerId }: { customerId: string }) {
         </div>
       ) : (
         <div className="flex items-center justify-center h-32 border border-dashed border-border text-sm text-muted-foreground">
-          No statements available
+          No statements yet. Click "Generate" to create one.
         </div>
       )}
     </div>

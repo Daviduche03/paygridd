@@ -5,7 +5,7 @@ export const errorHandler: ErrorRequestHandler = (
   err: Error & { status?: number; statusCode?: number },
   req: Request,
   res: Response,
-  _next: any
+  _next: any,
 ) => {
   const status = err.status || err.statusCode || 500;
 

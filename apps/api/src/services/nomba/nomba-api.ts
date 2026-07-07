@@ -2,6 +2,8 @@ import { env } from "@/config/env";
 import { nombaCache } from "@/services/nomba/cache";
 import type {
   BankTransactionListResults,
+  BankTransferRequest,
+  BankTransferResponse,
   CreateVirtualAccountRequest,
   CreateVirtualAccountResponse,
   ExpireVirtualAccountResponse,
@@ -91,16 +93,15 @@ export class NombaApi {
   }
 
   async #refresh(refreshToken: string): Promise<string> {
-    const response = await this.#request<NombaApiResponse<RefreshTokenResponse>>(
-      "/v1/auth/token/refresh",
-      {
-        method: "POST",
-        body: {
-          grant_type: "refresh_token",
-          refresh_token: refreshToken,
-        },
+    const response = await this.#request<
+      NombaApiResponse<RefreshTokenResponse>
+    >("/v1/auth/token/refresh", {
+      method: "POST",
+      body: {
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
       },
-    );
+    });
 
     return this.#storeTokens(response.data);
   }
@@ -135,10 +136,9 @@ export class NombaApi {
     params: CreateVirtualAccountRequest,
   ): Promise<CreateVirtualAccountResponse> {
     const token = await this.#getAccessToken();
-    const response = await this.#request<NombaApiResponse<CreateVirtualAccountResponse>>(
-      "/v1/accounts/virtual",
-      { method: "POST", token, body: params },
-    );
+    const response = await this.#request<
+      NombaApiResponse<CreateVirtualAccountResponse>
+    >("/v1/accounts/virtual", { method: "POST", token, body: params });
     return response.data;
   }
 
@@ -147,22 +147,28 @@ export class NombaApi {
     params: CreateVirtualAccountRequest,
   ): Promise<CreateVirtualAccountResponse> {
     const token = await this.#getAccessToken();
-    const response = await this.#request<NombaApiResponse<CreateVirtualAccountResponse>>(
-      `/v1/accounts/virtual/${subAccountId}`,
-      { method: "POST", token, body: params },
-    );
+    const response = await this.#request<
+      NombaApiResponse<CreateVirtualAccountResponse>
+    >(`/v1/accounts/virtual/${subAccountId}`, {
+      method: "POST",
+      token,
+      body: params,
+    });
     return response.data;
   }
 
   async getVirtualAccount(identifier: string): Promise<VirtualAccountObject> {
-    return nombaCache.getOrSet(`nomba_virtual_account_${identifier}`, 1800, async () => {
-      const token = await this.#getAccessToken();
-      const response = await this.#request<NombaApiResponse<VirtualAccountObject>>(
-        `/v1/accounts/virtual/${identifier}`,
-        { method: "GET", token },
-      );
-      return response.data;
-    });
+    return nombaCache.getOrSet(
+      `nomba_virtual_account_${identifier}`,
+      1800,
+      async () => {
+        const token = await this.#getAccessToken();
+        const response = await this.#request<
+          NombaApiResponse<VirtualAccountObject>
+        >(`/v1/accounts/virtual/${identifier}`, { method: "GET", token });
+        return response.data;
+      },
+    );
   }
 
   async filterVirtualAccounts(
@@ -173,19 +179,24 @@ export class NombaApi {
     if (params.limit !== undefined) query.limit = String(params.limit);
     if (params.cursor) query.cursor = params.cursor;
 
-    const response = await this.#request<NombaApiResponse<FilterVirtualAccountResponse>>(
-      "/v1/accounts/virtual/list",
-      { method: "POST", token, query, body: params },
-    );
+    const response = await this.#request<
+      NombaApiResponse<FilterVirtualAccountResponse>
+    >("/v1/accounts/virtual/list", {
+      method: "POST",
+      token,
+      query,
+      body: params,
+    });
     return response.data;
   }
 
-  async expireVirtualAccount(identifier: string): Promise<ExpireVirtualAccountResponse> {
+  async expireVirtualAccount(
+    identifier: string,
+  ): Promise<ExpireVirtualAccountResponse> {
     const token = await this.#getAccessToken();
-    const response = await this.#request<NombaApiResponse<ExpireVirtualAccountResponse>>(
-      `/v1/accounts/virtual/${identifier}`,
-      { method: "DELETE", token },
-    );
+    const response = await this.#request<
+      NombaApiResponse<ExpireVirtualAccountResponse>
+    >(`/v1/accounts/virtual/${identifier}`, { method: "DELETE", token });
     await nombaCache.delete(`nomba_virtual_account_${identifier}`);
     return response.data;
   }
@@ -195,10 +206,13 @@ export class NombaApi {
     params: UpdateVirtualAccountRequest,
   ): Promise<UpdateVirtualAccountResponse> {
     const token = await this.#getAccessToken();
-    const response = await this.#request<NombaApiResponse<UpdateVirtualAccountResponse>>(
-      `/v1/accounts/virtual/${identifier}`,
-      { method: "PUT", token, body: params },
-    );
+    const response = await this.#request<
+      NombaApiResponse<UpdateVirtualAccountResponse>
+    >(`/v1/accounts/virtual/${identifier}`, {
+      method: "PUT",
+      token,
+      body: params,
+    });
     await nombaCache.delete(`nomba_virtual_account_${identifier}`);
     return response.data;
   }
@@ -220,6 +234,27 @@ export class NombaApi {
     return response.data;
   }
 
+  async transferToBank(params: BankTransferRequest): Promise<{
+    code: string;
+    description: string;
+    data: BankTransferResponse;
+  }> {
+    const token = await this.#getAccessToken();
+    const response = await this.#request<
+      NombaApiResponse<BankTransferResponse>
+    >("/v1/transfers/bank", { method: "POST", token, body: params });
+
+    if (response.code !== "00" && response.code !== "01") {
+      throw new Error(response.description || "Bank transfer failed");
+    }
+
+    return {
+      code: response.code,
+      description: response.description,
+      data: response.data,
+    };
+  }
+
   async getParentAccountTransactions(params?: {
     limit?: number;
     cursor?: string;
@@ -228,27 +263,30 @@ export class NombaApi {
   }): Promise<TransactionListResults> {
     const token = await this.#getAccessToken();
     const query = this.#paginationQuery(params);
-    const response = await this.#request<NombaApiResponse<TransactionListResults>>(
-      "/v1/transactions/accounts",
-      { method: "GET", token, query },
-    );
+    const response = await this.#request<
+      NombaApiResponse<TransactionListResults>
+    >("/v1/transactions/accounts", { method: "GET", token, query });
     return response.data;
   }
 
   async filterParentAccountTransactions(
     filterParams: FilterTransactionRequest,
-    pagination?: { limit?: number; cursor?: string; dateFrom?: string; dateTo?: string },
+    pagination?: {
+      limit?: number;
+      cursor?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    },
   ): Promise<TransactionListResults> {
     const token = await this.#getAccessToken();
-    const response = await this.#request<NombaApiResponse<TransactionListResults>>(
-      "/v1/transactions/accounts",
-      {
-        method: "POST",
-        token,
-        query: this.#paginationQuery(pagination),
-        body: filterParams,
-      },
-    );
+    const response = await this.#request<
+      NombaApiResponse<TransactionListResults>
+    >("/v1/transactions/accounts", {
+      method: "POST",
+      token,
+      query: this.#paginationQuery(pagination),
+      body: filterParams,
+    });
     return response.data;
   }
 
@@ -265,46 +303,62 @@ export class NombaApi {
     if (params.orderReference) query.orderReference = params.orderReference;
     if (params.orderId) query.orderId = params.orderId;
 
-    const response = await this.#request<NombaApiResponse<ParentAccountTransactionResult>>(
-      "/v1/transactions/accounts/single",
-      { method: "GET", token, query },
-    );
+    const response = await this.#request<
+      NombaApiResponse<ParentAccountTransactionResult>
+    >("/v1/transactions/accounts/single", { method: "GET", token, query });
     return response.data;
   }
 
   async getSubAccountTransactions(
     subAccountId: string,
-    params?: { limit?: number; cursor?: string; dateFrom?: string; dateTo?: string },
+    params?: {
+      limit?: number;
+      cursor?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    },
   ): Promise<TransactionListResults> {
     const token = await this.#getAccessToken();
-    const response = await this.#request<NombaApiResponse<TransactionListResults>>(
-      `/v1/transactions/accounts/${subAccountId}`,
-      { method: "GET", token, query: this.#paginationQuery(params) },
-    );
+    const response = await this.#request<
+      NombaApiResponse<TransactionListResults>
+    >(`/v1/transactions/accounts/${subAccountId}`, {
+      method: "GET",
+      token,
+      query: this.#paginationQuery(params),
+    });
     return response.data;
   }
 
   async filterSubAccountTransactions(
     subAccountId: string,
     filterParams: FilterTransactionRequest,
-    pagination?: { limit?: number; cursor?: string; dateFrom?: string; dateTo?: string },
+    pagination?: {
+      limit?: number;
+      cursor?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    },
   ): Promise<TransactionListResults> {
     const token = await this.#getAccessToken();
-    const response = await this.#request<NombaApiResponse<TransactionListResults>>(
-      `/v1/transactions/accounts/${subAccountId}`,
-      {
-        method: "POST",
-        token,
-        query: this.#paginationQuery(pagination),
-        body: filterParams,
-      },
-    );
+    const response = await this.#request<
+      NombaApiResponse<TransactionListResults>
+    >(`/v1/transactions/accounts/${subAccountId}`, {
+      method: "POST",
+      token,
+      query: this.#paginationQuery(pagination),
+      body: filterParams,
+    });
     return response.data;
   }
 
   async getSingleSubAccountTransaction(
     subAccountId: string,
-    params: { transactionRef?: string; merchantTxRef?: string; orderReference?: string; orderId?: string },
+    params: {
+      transactionRef?: string;
+      merchantTxRef?: string;
+      orderReference?: string;
+      orderId?: string;
+    },
   ): Promise<ParentAccountTransactionResult> {
     const token = await this.#getAccessToken();
     const query: Record<string, string> = {};
@@ -313,19 +367,28 @@ export class NombaApi {
     if (params.orderReference) query.orderReference = params.orderReference;
     if (params.orderId) query.orderId = params.orderId;
 
-    const response = await this.#request<NombaApiResponse<ParentAccountTransactionResult>>(
-      `/v1/transactions/accounts/${subAccountId}/single`,
-      { method: "GET", token, query },
-    );
+    const response = await this.#request<
+      NombaApiResponse<ParentAccountTransactionResult>
+    >(`/v1/transactions/accounts/${subAccountId}/single`, {
+      method: "GET",
+      token,
+      query,
+    });
     return response.data;
   }
 
-  async getParentAccountBalance(): Promise<{ balance: number; currency: string } | null> {
+  async getParentAccountBalance(): Promise<{
+    balance: number;
+    currency: string;
+  } | null> {
     try {
       const txns = await this.getBankTransactions({ limit: 1 });
       const latest = txns.results[0];
       if (latest) {
-        return { balance: latest.walletBalance, currency: latest.currency ?? "NGN" };
+        return {
+          balance: latest.walletBalance,
+          currency: latest.currency ?? "NGN",
+        };
       }
       return null;
     } catch {
@@ -340,10 +403,13 @@ export class NombaApi {
     dateTo?: string;
   }): Promise<BankTransactionListResults> {
     const token = await this.#getAccessToken();
-    const response = await this.#request<NombaApiResponse<BankTransactionListResults>>(
-      "/v1/transactions/bank",
-      { method: "GET", token, query: this.#paginationQuery(params) },
-    );
+    const response = await this.#request<
+      NombaApiResponse<BankTransactionListResults>
+    >("/v1/transactions/bank", {
+      method: "GET",
+      token,
+      query: this.#paginationQuery(params),
+    });
     return response.data;
   }
 
@@ -353,7 +419,9 @@ export class NombaApi {
     dateTo?: string;
   }): Promise<VirtualAccountTransactionListResults> {
     const token = await this.#getAccessToken();
-    const query: Record<string, string> = { virtual_account: params.virtualAccount };
+    const query: Record<string, string> = {
+      virtual_account: params.virtualAccount,
+    };
     if (params.dateFrom) query.dateFrom = params.dateFrom;
     if (params.dateTo) query.dateTo = params.dateTo;
 
@@ -363,12 +431,13 @@ export class NombaApi {
     return response.data;
   }
 
-  async requeryTransaction(sessionId: string): Promise<TransactionRequeryResult> {
+  async requeryTransaction(
+    sessionId: string,
+  ): Promise<TransactionRequeryResult> {
     const token = await this.#getAccessToken();
-    const response = await this.#request<NombaApiResponse<TransactionRequeryResult>>(
-      `/v1/transactions/requery/${sessionId}`,
-      { method: "GET", token },
-    );
+    const response = await this.#request<
+      NombaApiResponse<TransactionRequeryResult>
+    >(`/v1/transactions/requery/${sessionId}`, { method: "GET", token });
     return response.data;
   }
 
@@ -411,7 +480,8 @@ export class NombaApi {
     const res = await fetch(url, {
       method: options.method ?? "GET",
       headers,
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      body:
+        options.body !== undefined ? JSON.stringify(options.body) : undefined,
     });
 
     const text = await res.text();

@@ -32,6 +32,8 @@ export function ConnectBankNigeriaStep({ onComplete }: Props) {
     ...trpc.banks.list.queryOptions(),
   });
 
+  const { data: user } = useQuery(trpc.user.me.queryOptions());
+
   const banks: Bank[] = banksData ?? [];
 
   const bankItems = banks.map((bank) => ({
@@ -40,6 +42,7 @@ export function ConnectBankNigeriaStep({ onComplete }: Props) {
   }));
 
   const selectedBank = bankItems.find((item) => item.id === selectedBankCode);
+  const selectedBankName = selectedBank?.label ?? "";
 
   const verifyMutation = useMutation({
     ...trpc.banks.verify.mutationOptions({
@@ -57,6 +60,23 @@ export function ConnectBankNigeriaStep({ onComplete }: Props) {
     }),
   });
 
+  const saveSettlementMutation = useMutation({
+    ...trpc.business.updateSettlementAccount.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries();
+        onComplete();
+      },
+      onError: (error: any) => {
+        toast({
+          duration: 6000,
+          title: "Failed to save bank account",
+          variant: "info",
+          description: error.message ?? "Please try again.",
+        });
+      },
+    }),
+  });
+
   const handleVerify = () => {
     if (!selectedBankCode || accountNumber.length !== 10) return;
     setVerifiedName(null);
@@ -64,9 +84,20 @@ export function ConnectBankNigeriaStep({ onComplete }: Props) {
   };
 
   const handleConfirm = () => {
-    queryClient.invalidateQueries();
-    onComplete();
+    if (!user?.businessId) {
+      queryClient.invalidateQueries();
+      onComplete();
+      return;
+    }
+    saveSettlementMutation.mutate({
+      settlementBankName: selectedBankName,
+      settlementBankCode: selectedBankCode,
+      settlementAccountNumber: accountNumber,
+      settlementAccountName: verifiedName ?? "",
+    });
   };
+
+  const isSaving = saveSettlementMutation.isPending;
 
   return (
     <div className="space-y-4">
@@ -85,8 +116,7 @@ export function ConnectBankNigeriaStep({ onComplete }: Props) {
         transition={{ duration: 0.4, delay: 0.2 }}
         className="text-sm text-muted-foreground leading-relaxed"
       >
-        Verify your Nigerian bank account to enable transaction tracking, runway
-        insights, and automated reconciliation.
+        Verify your Nigerian bank account to receive payouts from collected payments.
       </motion.p>
 
       <motion.div
@@ -163,8 +193,8 @@ export function ConnectBankNigeriaStep({ onComplete }: Props) {
               <span className="text-muted-foreground">Account number: </span>
               <span className="font-medium">{accountNumber}</span>
             </div>
-            <Button type="button" onClick={handleConfirm} className="w-full">
-              Confirm & continue
+            <Button type="button" onClick={handleConfirm} disabled={isSaving} className="w-full">
+              {isSaving ? "Saving..." : "Confirm & continue"}
             </Button>
           </div>
         )}

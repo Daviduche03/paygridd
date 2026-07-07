@@ -1,9 +1,9 @@
 import { Router } from "express";
+import { businessRoutes } from "@/routes/api-v1/business.routes";
 import { customersRoutes } from "@/routes/api-v1/customers.routes";
-import { virtualAccountsRoutes } from "@/routes/api-v1/virtual-accounts.routes";
 import { invoicesRoutes } from "@/routes/api-v1/invoices.routes";
 import { transactionsRoutes } from "@/routes/api-v1/transactions.routes";
-import { businessRoutes } from "@/routes/api-v1/business.routes";
+import { virtualAccountsRoutes } from "@/routes/api-v1/virtual-accounts.routes";
 import { webhooksRoutes } from "@/routes/api-v1/webhooks.routes";
 
 export const apiV1Routes = Router();

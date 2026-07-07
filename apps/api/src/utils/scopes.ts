@@ -34,9 +34,21 @@ export type Scope = (typeof SCOPES)[number];
 export type ScopePreset = "all_access" | "read_only" | "restricted";
 
 export const scopePresets = {
-  all_access: { scopes: ["apis.all"] as Scope[], label: "All access", description: "full access to all resources" },
-  read_only: { scopes: ["apis.read"] as Scope[], label: "Read only", description: "read-only access to all resources" },
-  restricted: { scopes: [] as Scope[], label: "Restricted", description: "custom restricted access" },
+  all_access: {
+    scopes: ["apis.all"] as Scope[],
+    label: "All access",
+    description: "full access to all resources",
+  },
+  read_only: {
+    scopes: ["apis.read"] as Scope[],
+    label: "Read only",
+    description: "read-only access to all resources",
+  },
+  restricted: {
+    scopes: [] as Scope[],
+    label: "Restricted",
+    description: "custom restricted access",
+  },
 };
 
 const presetNames: Record<string, ScopePreset> = {

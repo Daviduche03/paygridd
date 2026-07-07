@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from "express";
+import type { NextFunction, Request, Response } from "express";
 
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -10,7 +10,7 @@ export interface ApiResponse<T = unknown> {
 export type AsyncRequestHandler = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => Promise<void>;
 
 export interface AuthenticatedRequest extends Request {

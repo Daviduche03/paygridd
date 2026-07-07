@@ -1,10 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { virtualAccountRepository } from "@/repositories/virtual-account.repository";
 import { transactionRepository } from "@/repositories/transaction.repository";
+import { virtualAccountRepository } from "@/repositories/virtual-account.repository";
 import { virtualAccountService } from "@/services/virtual-account.service";
-import { getBusinessIdForUser } from "@/utils/business";
 import { protectedProcedure, t } from "@/trpc/init";
+import { getBusinessIdForUser } from "@/utils/business";
 
 const statusSchema = z.enum(["active", "suspended", "closed", "expired"]);
 
@@ -60,7 +60,12 @@ export const virtualAccountsRouter = t.router({
     }),
 
   transactions: protectedProcedure
-    .input(z.object({ virtualAccountId: z.string().uuid(), limit: z.number().optional() }))
+    .input(
+      z.object({
+        virtualAccountId: z.string().uuid(),
+        limit: z.number().optional(),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       const businessId = await getBusinessIdForUser(ctx.user.id);
       if (!businessId) return [];
@@ -84,10 +89,14 @@ export const virtualAccountsRouter = t.router({
     .mutation(async ({ ctx, input }) => {
       const businessId = await getBusinessIdForUser(ctx.user.id);
       if (!businessId) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Business required" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Business required",
+        });
       }
 
-      const accountRef = input.accountRef?.trim() || `pg-${crypto.randomUUID()}`;
+      const accountRef =
+        input.accountRef?.trim() || `pg-${crypto.randomUUID()}`;
 
       const created = input.customerId
         ? await virtualAccountService.createStaticForCustomer({
@@ -104,7 +113,10 @@ export const virtualAccountsRouter = t.router({
           });
 
       if (!created?.id) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create virtual account" });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create virtual account",
+        });
       }
 
       return virtualAccountRepository.findById(businessId, created.id);

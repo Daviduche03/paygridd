@@ -1,5 +1,5 @@
-import { logger } from "@/utils/logger";
 import { ProviderError } from "@/services/nomba/errors";
+import { logger } from "@/utils/logger";
 import { NombaApi } from "./nomba-api";
 import type {
   BankTransactionListResults,
@@ -75,9 +75,7 @@ export class NombaProvider {
     }
   }
 
-  async getVirtualAccount(
-    identifier: string,
-  ): Promise<VirtualAccountObject> {
+  async getVirtualAccount(identifier: string): Promise<VirtualAccountObject> {
     logger.info("getVirtualAccount", { identifier });
 
     try {
@@ -166,12 +164,20 @@ export class NombaProvider {
 
   async filterParentAccountTransactions(
     filterParams: FilterTransactionRequest,
-    pagination?: { limit?: number; cursor?: string; dateFrom?: string; dateTo?: string },
+    pagination?: {
+      limit?: number;
+      cursor?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    },
   ): Promise<TransactionListResults> {
     logger.info("filterParentAccountTransactions");
 
     try {
-      return await this.#api.filterParentAccountTransactions(filterParams, pagination);
+      return await this.#api.filterParentAccountTransactions(
+        filterParams,
+        pagination,
+      );
     } catch (error) {
       const parsed = parseNombaError(error);
       if (parsed) throw new ProviderError(parsed);
@@ -198,7 +204,12 @@ export class NombaProvider {
 
   async getSubAccountTransactions(
     subAccountId: string,
-    params?: { limit?: number; cursor?: string; dateFrom?: string; dateTo?: string },
+    params?: {
+      limit?: number;
+      cursor?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    },
   ): Promise<TransactionListResults> {
     logger.info("getSubAccountTransactions", { subAccountId });
 
@@ -214,12 +225,21 @@ export class NombaProvider {
   async filterSubAccountTransactions(
     subAccountId: string,
     filterParams: FilterTransactionRequest,
-    pagination?: { limit?: number; cursor?: string; dateFrom?: string; dateTo?: string },
+    pagination?: {
+      limit?: number;
+      cursor?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    },
   ): Promise<TransactionListResults> {
     logger.info("filterSubAccountTransactions", { subAccountId });
 
     try {
-      return await this.#api.filterSubAccountTransactions(subAccountId, filterParams, pagination);
+      return await this.#api.filterSubAccountTransactions(
+        subAccountId,
+        filterParams,
+        pagination,
+      );
     } catch (error) {
       const parsed = parseNombaError(error);
       if (parsed) throw new ProviderError(parsed);
@@ -229,12 +249,20 @@ export class NombaProvider {
 
   async getSingleSubAccountTransaction(
     subAccountId: string,
-    params: { transactionRef?: string; merchantTxRef?: string; orderReference?: string; orderId?: string },
+    params: {
+      transactionRef?: string;
+      merchantTxRef?: string;
+      orderReference?: string;
+      orderId?: string;
+    },
   ): Promise<ParentAccountTransactionResult> {
     logger.info("getSingleSubAccountTransaction", { subAccountId });
 
     try {
-      return await this.#api.getSingleSubAccountTransaction(subAccountId, params);
+      return await this.#api.getSingleSubAccountTransaction(
+        subAccountId,
+        params,
+      );
     } catch (error) {
       const parsed = parseNombaError(error);
       if (parsed) throw new ProviderError(parsed);

@@ -3,7 +3,7 @@
 import { cn } from "ui/cn";
 import { Icons } from "ui/icons";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useCopyToClipboard } from "usehooks-ts";
 
 type Props = {
@@ -14,13 +14,20 @@ type Props = {
 export function CopyInput({ value, className }: Props) {
   const [isCopied, setCopied] = useState(false);
   const [, copy] = useCopyToClipboard();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const handleClipboard = () => {
+  const handleClipboard = async () => {
     setCopied(true);
 
-    copy(value);
+    try {
+      await copy(value);
+    } catch {
+      setCopied(false);
+      return;
+    }
 
-    setTimeout(() => {
+    clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
       setCopied(false);
     }, 2000);
   };

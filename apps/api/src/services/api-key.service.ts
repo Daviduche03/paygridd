@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
-import { apiKeyRepository } from "@/repositories/api-key.repository";
 import type { ApiKey } from "@/repositories/api-key.repository";
+import { apiKeyRepository } from "@/repositories/api-key.repository";
 
 const WEBHOOK_EVENTS = [
   "payment.received",
@@ -71,14 +71,16 @@ export const apiKeyService = {
     data: { name?: string; scopes?: string[]; active?: boolean },
   ) {
     const key = await apiKeyRepository.findById(id);
-    if (!key || key.businessId !== businessId) throw new Error("API key not found");
+    if (!key || key.businessId !== businessId)
+      throw new Error("API key not found");
 
     return apiKeyRepository.update(id, data);
   },
 
   async remove(businessId: string, id: string) {
     const key = await apiKeyRepository.findById(id);
-    if (!key || key.businessId !== businessId) throw new Error("API key not found");
+    if (!key || key.businessId !== businessId)
+      throw new Error("API key not found");
 
     await apiKeyRepository.remove(id);
     return { success: true };
@@ -112,16 +114,23 @@ export const apiKeyService = {
   async updateWebhook(
     businessId: string,
     id: string,
-    data: { url?: string; description?: string; events?: string[]; active?: boolean },
+    data: {
+      url?: string;
+      description?: string;
+      events?: string[];
+      active?: boolean;
+    },
   ) {
     const existing = await apiKeyRepository.findWebhookById(id);
-    if (!existing || existing.businessId !== businessId) throw new Error("Webhook not found");
+    if (!existing || existing.businessId !== businessId)
+      throw new Error("Webhook not found");
     return apiKeyRepository.updateWebhook(id, data);
   },
 
   async removeWebhook(businessId: string, id: string) {
     const existing = await apiKeyRepository.findWebhookById(id);
-    if (!existing || existing.businessId !== businessId) throw new Error("Webhook not found");
+    if (!existing || existing.businessId !== businessId)
+      throw new Error("Webhook not found");
     await apiKeyRepository.removeWebhook(id);
     return { success: true };
   },

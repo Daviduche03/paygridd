@@ -60,19 +60,21 @@ export const invoicesRouter = t.router({
     return invoiceService.summary(ctx.user.id);
   }),
 
-  get: protectedProcedure.input(listInputSchema).query(async ({ ctx, input }) => {
-    return invoiceService.list({
-      userId: ctx.user.id,
-      pageSize: input?.pageSize ?? 50,
-      cursor: input?.cursor,
-      q: input?.q,
-      statuses: input?.statuses,
-      customers: input?.customers,
-      start: input?.start,
-      end: input?.end,
-      dueFilter: input?.dueFilter ?? null,
-    });
-  }),
+  get: protectedProcedure
+    .input(listInputSchema)
+    .query(async ({ ctx, input }) => {
+      return invoiceService.list({
+        userId: ctx.user.id,
+        pageSize: input?.pageSize ?? 50,
+        cursor: input?.cursor,
+        q: input?.q,
+        statuses: input?.statuses,
+        customers: input?.customers,
+        start: input?.start,
+        end: input?.end,
+        dueFilter: input?.dueFilter ?? null,
+      });
+    }),
 
   getById: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
@@ -96,10 +98,16 @@ export const invoicesRouter = t.router({
         .optional(),
     )
     .query(async ({ ctx, input }) => {
-      return invoiceService.invoiceSummary(ctx.user.id, input?.statuses ?? null);
+      return invoiceService.invoiceSummary(
+        ctx.user.id,
+        input?.statuses ?? null,
+      );
     }),
 
-  paymentStatus: protectedProcedure.query(async () => ({ score: 0, status: "neutral" })),
+  paymentStatus: protectedProcedure.query(async () => ({
+    score: 0,
+    status: "neutral",
+  })),
 
   draft: protectedProcedure
     .input(invoiceDraftInputSchema)
@@ -109,7 +117,8 @@ export const invoicesRouter = t.router({
       } catch (error) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: error instanceof Error ? error.message : "Failed to save draft",
+          message:
+            error instanceof Error ? error.message : "Failed to save draft",
         });
       }
     }),
@@ -122,7 +131,8 @@ export const invoicesRouter = t.router({
       } catch (error) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: error instanceof Error ? error.message : "Failed to create invoice",
+          message:
+            error instanceof Error ? error.message : "Failed to create invoice",
         });
       }
     }),
@@ -136,7 +146,8 @@ export const invoicesRouter = t.router({
       } catch (error) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: error instanceof Error ? error.message : "Failed to update invoice",
+          message:
+            error instanceof Error ? error.message : "Failed to update invoice",
         });
       }
     }),
@@ -149,15 +160,37 @@ export const invoicesRouter = t.router({
 
   remind: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .mutation(async () => ({ success: true })),
+    .mutation(async ({ ctx, input }) => {
+      return invoiceService.remind(ctx.user.id, input.id);
+    }),
 
   duplicate: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .mutation(async () => ({ id: "stub" })),
+    .mutation(async ({ ctx, input }) => {
+      return invoiceService.duplicate(ctx.user.id, input.id);
+    }),
 
   cancelSchedule: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .mutation(async () => ({ success: true })),
+    .mutation(async ({ ctx, input }) => {
+      return invoiceService.cancelSchedule(ctx.user.id, input.id);
+    }),
+
+  verifyAndMarkAsPaid: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await invoiceService.verifyAndMarkAsPaid(ctx.user.id, input.id);
+      } catch (error) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to verify and mark as paid",
+        });
+      }
+    }),
 
   getInvoiceByToken: publicProcedure
     .input(z.object({ token: z.string() }))
@@ -182,7 +215,9 @@ export const invoicesRouter = t.router({
     .query(async () => 0),
 
   createFromTracker: protectedProcedure
-    .input(z.object({ businessId: z.string(), projectIds: z.array(z.string()) }))
+    .input(
+      z.object({ businessId: z.string(), projectIds: z.array(z.string()) }),
+    )
     .mutation(async () => ({ id: "stub" })),
 
   searchInvoiceNumber: protectedProcedure

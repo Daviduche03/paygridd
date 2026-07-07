@@ -1,10 +1,10 @@
-import { membershipRepository } from "@/repositories/membership.repository";
-import { inviteRepository } from "@/repositories/invite.repository";
-import { userRepository } from "@/repositories/user.repository";
-import { businessRepository } from "@/repositories/business.repository";
-import { emailService } from "@/services/email.service";
 import { env } from "@/config/env";
+import { businessRepository } from "@/repositories/business.repository";
+import { inviteRepository } from "@/repositories/invite.repository";
 import type { BusinessRole } from "@/repositories/membership.repository";
+import { membershipRepository } from "@/repositories/membership.repository";
+import { userRepository } from "@/repositories/user.repository";
+import { emailService } from "@/services/email.service";
 
 export const membersService = {
   async getMembers(businessId: string) {
@@ -20,7 +20,10 @@ export const membersService = {
     }));
   },
 
-  async getUserRole(userId: string, businessId: string): Promise<BusinessRole | null> {
+  async getUserRole(
+    userId: string,
+    businessId: string,
+  ): Promise<BusinessRole | null> {
     const membership = await membershipRepository.findOne(userId, businessId);
     return membership?.role ?? null;
   },
@@ -35,16 +38,30 @@ export const membersService = {
     for (const invite of data.invites) {
       const existingUser = await userRepository.findByEmail(invite.email);
       if (existingUser) {
-        const alreadyMember = await membershipRepository.findOne(existingUser.id, data.businessId);
+        const alreadyMember = await membershipRepository.findOne(
+          existingUser.id,
+          data.businessId,
+        );
         if (alreadyMember) {
-          results.push({ email: invite.email, sent: false, reason: "already_member" });
+          results.push({
+            email: invite.email,
+            sent: false,
+            reason: "already_member",
+          });
           continue;
         }
       }
 
-      const pendingInvite = await inviteRepository.findPending(data.businessId, invite.email);
+      const pendingInvite = await inviteRepository.findPending(
+        data.businessId,
+        invite.email,
+      );
       if (pendingInvite) {
-        results.push({ email: invite.email, sent: false, reason: "already_invited" });
+        results.push({
+          email: invite.email,
+          sent: false,
+          reason: "already_invited",
+        });
         continue;
       }
 
@@ -60,12 +77,14 @@ export const membersService = {
         userRepository.findById(data.invitedByUserId),
       ]);
       if (business?.name) {
-        emailService.sendMemberInvite({
-          to: invite.email,
-          businessName: business.name,
-          invitedByName: inviter?.fullName ?? "A team member",
-          inviteUrl: `${env.FRONTEND_URL}/invite`,
-        }).catch(() => {});
+        emailService
+          .sendMemberInvite({
+            to: invite.email,
+            businessName: business.name,
+            invitedByName: inviter?.fullName ?? "A team member",
+            inviteUrl: `${env.FRONTEND_URL}/invite`,
+          })
+          .catch(() => {});
       }
 
       results.push({ email: invite.email, sent: true });
@@ -130,7 +149,8 @@ export const membersService = {
     const membership = await membershipRepository.findByBusiness(businessId);
     const target = membership.find((m) => m.id === membershipId);
     if (!target) throw new Error("Member not found");
-    if (target.role === "owner") throw new Error("Cannot remove the business owner");
+    if (target.role === "owner")
+      throw new Error("Cannot remove the business owner");
 
     await membershipRepository.remove(membershipId);
     return { success: true };
@@ -142,7 +162,9 @@ export const membersService = {
     if (membership.role === "owner") {
       const count = await membershipRepository.countByBusiness(businessId);
       if (count <= 1) {
-        throw new Error("Cannot leave as the last owner. Delete the business instead.");
+        throw new Error(
+          "Cannot leave as the last owner. Delete the business instead.",
+        );
       }
     }
 

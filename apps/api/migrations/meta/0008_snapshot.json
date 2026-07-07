@@ -123,12 +123,8 @@
           "name": "api_keys_business_id_businesses_id_fk",
           "tableFrom": "api_keys",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -136,12 +132,8 @@
           "name": "api_keys_created_by_users_id_fk",
           "tableFrom": "api_keys",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -261,12 +253,8 @@
           "name": "business_invites_business_id_businesses_id_fk",
           "tableFrom": "business_invites",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -274,12 +262,8 @@
           "name": "business_invites_invited_by_users_id_fk",
           "tableFrom": "business_invites",
           "tableTo": "users",
-          "columnsFrom": [
-            "invited_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["invited_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -390,12 +374,8 @@
           "name": "business_kyc_business_id_businesses_id_fk",
           "tableFrom": "business_kyc",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -405,9 +385,7 @@
         "business_kyc_business_id_unique": {
           "name": "business_kyc_business_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "business_id"
-          ]
+          "columns": ["business_id"]
         }
       },
       "policies": {},
@@ -558,12 +536,8 @@
           "name": "customers_business_id_businesses_id_fk",
           "tableFrom": "customers",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -604,12 +578,8 @@
           "name": "invoice_number_sequences_business_id_businesses_id_fk",
           "tableFrom": "invoice_number_sequences",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -617,10 +587,7 @@
       "compositePrimaryKeys": {
         "invoice_number_sequences_business_id_year_pk": {
           "name": "invoice_number_sequences_business_id_year_pk",
-          "columns": [
-            "business_id",
-            "year"
-          ]
+          "columns": ["business_id", "year"]
         }
       },
       "uniqueConstraints": {},
@@ -767,12 +734,8 @@
           "name": "invoices_business_id_businesses_id_fk",
           "tableFrom": "invoices",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -780,12 +743,8 @@
           "name": "invoices_customer_id_customers_id_fk",
           "tableFrom": "invoices",
           "tableTo": "customers",
-          "columnsFrom": [
-            "customer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["customer_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -793,12 +752,8 @@
           "name": "invoices_virtual_account_id_virtual_accounts_id_fk",
           "tableFrom": "invoices",
           "tableTo": "virtual_accounts",
-          "columnsFrom": [
-            "virtual_account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["virtual_account_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -974,12 +929,8 @@
           "name": "transactions_business_id_businesses_id_fk",
           "tableFrom": "transactions",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -987,12 +938,8 @@
           "name": "transactions_virtual_account_id_virtual_accounts_id_fk",
           "tableFrom": "transactions",
           "tableTo": "virtual_accounts",
-          "columnsFrom": [
-            "virtual_account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["virtual_account_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1000,12 +947,8 @@
           "name": "transactions_customer_id_customers_id_fk",
           "tableFrom": "transactions",
           "tableTo": "customers",
-          "columnsFrom": [
-            "customer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["customer_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1013,12 +956,8 @@
           "name": "transactions_invoice_id_invoices_id_fk",
           "tableFrom": "transactions",
           "tableTo": "invoices",
-          "columnsFrom": [
-            "invoice_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["invoice_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1094,12 +1033,8 @@
           "name": "users_business_id_businesses_id_fk",
           "tableFrom": "users",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1177,12 +1112,8 @@
           "name": "users_on_business_user_id_users_id_fk",
           "tableFrom": "users_on_business",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1190,12 +1121,8 @@
           "name": "users_on_business_business_id_businesses_id_fk",
           "tableFrom": "users_on_business",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1362,12 +1289,8 @@
           "name": "virtual_accounts_business_id_businesses_id_fk",
           "tableFrom": "virtual_accounts",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1375,12 +1298,8 @@
           "name": "virtual_accounts_customer_id_customers_id_fk",
           "tableFrom": "virtual_accounts",
           "tableTo": "customers",
-          "columnsFrom": [
-            "customer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["customer_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1462,12 +1381,8 @@
           "name": "webhook_events_business_id_businesses_id_fk",
           "tableFrom": "webhook_events",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1475,12 +1390,8 @@
           "name": "webhook_events_transaction_id_transactions_id_fk",
           "tableFrom": "webhook_events",
           "tableTo": "transactions",
-          "columnsFrom": [
-            "transaction_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["transaction_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1572,12 +1483,8 @@
           "name": "webhooks_business_id_businesses_id_fk",
           "tableFrom": "webhooks",
           "tableTo": "businesses",
-          "columnsFrom": [
-            "business_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["business_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1609,21 +1516,12 @@
     "public.business_role": {
       "name": "business_role",
       "schema": "public",
-      "values": [
-        "owner",
-        "admin",
-        "member"
-      ]
+      "values": ["owner", "admin", "member"]
     },
     "public.invite_status": {
       "name": "invite_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "accepted",
-        "declined",
-        "expired"
-      ]
+      "values": ["pending", "accepted", "declined", "expired"]
     },
     "public.invoice_status": {
       "name": "invoice_status",
@@ -1641,11 +1539,7 @@
     "public.kyc_tier": {
       "name": "kyc_tier",
       "schema": "public",
-      "values": [
-        "tier_1",
-        "tier_2",
-        "tier_3"
-      ]
+      "values": ["tier_1", "tier_2", "tier_3"]
     },
     "public.reconciliation_status": {
       "name": "reconciliation_status",
@@ -1662,38 +1556,22 @@
     "public.transaction_status": {
       "name": "transaction_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "posted",
-        "failed",
-        "reversed"
-      ]
+      "values": ["pending", "posted", "failed", "reversed"]
     },
     "public.transaction_type": {
       "name": "transaction_type",
       "schema": "public",
-      "values": [
-        "credit",
-        "debit"
-      ]
+      "values": ["credit", "debit"]
     },
     "public.virtual_account_kind": {
       "name": "virtual_account_kind",
       "schema": "public",
-      "values": [
-        "static",
-        "dynamic"
-      ]
+      "values": ["static", "dynamic"]
     },
     "public.virtual_account_status": {
       "name": "virtual_account_status",
       "schema": "public",
-      "values": [
-        "active",
-        "suspended",
-        "closed",
-        "expired"
-      ]
+      "values": ["active", "suspended", "closed", "expired"]
     }
   },
   "schemas": {},

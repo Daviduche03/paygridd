@@ -1,19 +1,20 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import express from "express";
-import cors from "cors";
-import helmet from "helmet";
-import rateLimit from "express-rate-limit";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
+import cors from "cors";
+import express from "express";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
 import { env } from "@/config/env";
 import { errorHandler } from "@/middleware/error.middleware";
-import { logger } from "@/utils/logger";
-import { appRouter } from "@/trpc/router";
-import { createContext } from "@/trpc/context";
+import { apiV1Routes } from "@/routes/api-v1.routes";
 import { authRoutes } from "@/routes/auth.routes";
+import { chatRoutes } from "@/routes/chat.routes";
 import { filesRoutes } from "@/routes/files.routes";
 import { webhooksRoutes } from "@/routes/webhooks.routes";
-import { apiV1Routes } from "@/routes/api-v1.routes";
+import { createContext } from "@/trpc/context";
+import { appRouter } from "@/trpc/router";
+import { logger } from "@/utils/logger";
 
 export function createApp() {
   const app = express();
@@ -34,7 +35,10 @@ export function createApp() {
     max: 60,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { success: false, error: "Too many requests, please try again later" },
+    message: {
+      success: false,
+      error: "Too many requests, please try again later",
+    },
   });
   app.use("/trpc", apiLimiter);
   app.use("/api", apiLimiter);
@@ -44,12 +48,17 @@ export function createApp() {
     max: 10,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { success: false, error: "Too many requests, please try again later" },
+    message: {
+      success: false,
+      error: "Too many requests, please try again later",
+    },
   });
   app.use("/auth", authLimiter);
 
   // CORS
-  const allowedOrigins = env.ALLOWED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean);
+  const allowedOrigins = env.ALLOWED_ORIGINS.split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
   app.use(
     cors({
       origin: (origin, callback) => {
@@ -70,7 +79,9 @@ export function createApp() {
     const start = Date.now();
     res.on("finish", () => {
       const duration = Date.now() - start;
-      logger.info(`${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms`);
+      logger.info(
+        `${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms`,
+      );
     });
     next();
   });
@@ -93,13 +104,17 @@ export function createApp() {
 
   // Health check (before routes)
   app.get("/health", (_req, res) => {
-    res.json({ success: true, data: { status: "ok", timestamp: new Date().toISOString() } });
+    res.json({
+      success: true,
+      data: { status: "ok", timestamp: new Date().toISOString() },
+    });
   });
 
   app.use("/auth", authRoutes);
   app.use("/files", filesRoutes);
   app.use("/webhooks", webhooksRoutes);
   app.use("/api/v1", apiV1Routes);
+  app.use("/chat", chatRoutes);
 
   // tRPC — all API business logic
   app.use(
@@ -113,7 +128,16 @@ export function createApp() {
   // SPA fallback — serve index.html for non-API GET requests
   if (existsSync(frontendDist)) {
     app.get("*", (req, res, next) => {
-      if (req.path.startsWith("/trpc") || req.path.startsWith("/auth") || req.path.startsWith("/api") || req.path.startsWith("/webhooks") || req.path.startsWith("/files") || req.path.startsWith("/docs") || req.path.startsWith("/health")) {
+      if (
+        req.path.startsWith("/trpc") ||
+        req.path.startsWith("/auth") ||
+        req.path.startsWith("/api") ||
+        req.path.startsWith("/chat") ||
+        req.path.startsWith("/webhooks") ||
+        req.path.startsWith("/files") ||
+        req.path.startsWith("/docs") ||
+        req.path.startsWith("/health")
+      ) {
         return next();
       }
       res.sendFile(path.join(frontendDist, "index.html"));

@@ -8,6 +8,7 @@ const tabs = [
   { path: "/settings/members", label: "Members" },
   { path: "/settings/kyc", label: "KYC" },
   { path: "/settings/developer", label: "Developer" },
+  { path: "/settings/payouts", label: "Payouts" },
 ];
 
 export function SettingsTabs() {

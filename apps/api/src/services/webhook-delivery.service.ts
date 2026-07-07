@@ -67,7 +67,8 @@ export const webhookDeliveryService = {
       await apiKeyRepository.updateWebhookDelivery(delivery.id, {
         status: shouldRetry ? "retrying" : "failed",
         responseCode: null,
-        responseBody: error instanceof Error ? error.message : "Connection failed",
+        responseBody:
+          error instanceof Error ? error.message : "Connection failed",
         attempts,
         nextRetryAt: shouldRetry
           ? new Date(Date.now() + delay * 1000).toISOString()
@@ -78,7 +79,11 @@ export const webhookDeliveryService = {
     }
   },
 
-  async deliverToAllSubscribers(businessId: string, eventType: string, payload: unknown) {
+  async deliverToAllSubscribers(
+    businessId: string,
+    eventType: string,
+    payload: unknown,
+  ) {
     const webhooks = await apiKeyRepository.findWebhooksByBusiness(businessId);
     const active = webhooks.filter(
       (w) => w.active && w.events.includes(eventType),
@@ -99,11 +104,16 @@ export const webhookDeliveryService = {
     const now = Date.now();
 
     for (const delivery of deliveries) {
-      if (delivery.nextRetryAt && new Date(delivery.nextRetryAt).getTime() > now) {
+      if (
+        delivery.nextRetryAt &&
+        new Date(delivery.nextRetryAt).getTime() > now
+      ) {
         continue;
       }
 
-      const webhook = await apiKeyRepository.findWebhookById(delivery.webhookId);
+      const webhook = await apiKeyRepository.findWebhookById(
+        delivery.webhookId,
+      );
       if (!webhook || !webhook.active) continue;
 
       try {

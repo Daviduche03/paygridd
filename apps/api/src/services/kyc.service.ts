@@ -65,7 +65,11 @@ export const kycService = {
       tier,
       limits: TIER_LIMITS[tier],
       bvn: { verified: bvnVerified, value: kyc?.bvn ?? undefined },
-      id: { verified: idVerified, type: kyc?.idType ?? undefined, number: kyc?.idNumber ?? undefined },
+      id: {
+        verified: idVerified,
+        type: kyc?.idType ?? undefined,
+        number: kyc?.idNumber ?? undefined,
+      },
       address: { verified: addressVerified },
       nextTier,
       requirements,
@@ -88,7 +92,12 @@ export const kycService = {
 
   async submitId(
     businessId: string,
-    data: { idType: string; idNumber: string; idFrontUrl: string; idBackUrl?: string },
+    data: {
+      idType: string;
+      idNumber: string;
+      idFrontUrl: string;
+      idBackUrl?: string;
+    },
   ): Promise<KycStatus> {
     const kyc = await kycRepository.upsert(businessId, {
       idType: data.idType,
@@ -106,7 +115,10 @@ export const kycService = {
     return this.getStatus(businessId);
   },
 
-  async submitAddress(businessId: string, proofUrl: string): Promise<KycStatus> {
+  async submitAddress(
+    businessId: string,
+    proofUrl: string,
+  ): Promise<KycStatus> {
     const kyc = await kycRepository.upsert(businessId, {
       addressProofUrl: proofUrl,
       addressVerifiedAt: new Date().toISOString(),

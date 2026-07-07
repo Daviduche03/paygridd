@@ -1,12 +1,12 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { overviewService } from "@/services/overview.service";
-import { nombaService } from "@/services/nomba/service";
+import { inviteRepository } from "@/repositories/invite.repository";
+import { membershipRepository } from "@/repositories/membership.repository";
+import { userRepository } from "@/repositories/user.repository";
 import { businessService } from "@/services/business.service";
 import { membersService } from "@/services/members.service";
-import { userRepository } from "@/repositories/user.repository";
-import { membershipRepository } from "@/repositories/membership.repository";
-import { inviteRepository } from "@/repositories/invite.repository";
+import { nombaService } from "@/services/nomba/service";
+import { overviewService } from "@/services/overview.service";
 import {
   protectedProcedure,
   publicProcedure,
@@ -18,7 +18,9 @@ const businessRoleSchema = z.enum(["owner", "admin", "member"]);
 
 export const businessRouter = t.router({
   list: protectedProcedure.query(async ({ ctx }) => {
-    let businessIds = await membershipRepository.findUserBusinessIds(ctx.user.id);
+    let businessIds = await membershipRepository.findUserBusinessIds(
+      ctx.user.id,
+    );
     if (businessIds.length === 0) {
       const user = await userRepository.findById(ctx.user.id);
       if (user?.businessId) {
@@ -55,14 +57,41 @@ export const businessRouter = t.router({
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const membership = await membershipRepository.findOne(ctx.user.id, input.id);
-      if (!membership) throw new TRPCError({ code: "NOT_FOUND", message: "Business not found" });
+      const membership = await membershipRepository.findOne(
+        ctx.user.id,
+        input.id,
+      );
+      if (!membership)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Business not found",
+        });
       return businessService.getBusinessById(input.id);
     }),
 
   update: protectedProcedure
     .input(z.object({ id: z.string().optional(), name: z.string().optional() }))
     .mutation(async () => ({ success: true })),
+
+  updateSettlementAccount: protectedProcedure
+    .input(
+      z.object({
+        settlementBankName: z.string().min(1),
+        settlementBankCode: z.string().min(1),
+        settlementAccountNumber: z.string().min(10).max(10),
+        settlementAccountName: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = await userRepository.findById(ctx.user.id);
+      if (!user?.businessId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No business found",
+        });
+      }
+      return businessService.updateSettlementAccount(user.businessId, input);
+    }),
 
   members: roleProtectedProcedure().query(async ({ ctx }) => {
     return membersService.getMembers(ctx.businessId!);
@@ -83,10 +112,14 @@ export const businessRouter = t.router({
     .input(z.object({ inviteId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const invite = await inviteRepository.findById(input.inviteId);
-      if (!invite) throw new TRPCError({ code: "NOT_FOUND", message: "Invite not found" });
+      if (!invite)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Invite not found" });
       const user = await userRepository.findById(ctx.user.id);
       if (!user || user.email !== invite.email) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "This invite is not for you" });
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "This invite is not for you",
+        });
       }
       return membersService.declineInvite(input.inviteId);
     }),
@@ -95,7 +128,10 @@ export const businessRouter = t.router({
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       if (ctx.businessId !== input.id) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "You can only delete your own business" });
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You can only delete your own business",
+        });
       }
       await businessService.deleteBusiness(input.id);
       return { success: true };
@@ -146,10 +182,11 @@ export const businessRouter = t.router({
       return membersService.leaveBusiness(ctx.user.id, input.businessId);
     }),
 
-  businessInvites: roleProtectedProcedure("owner", "admin")
-    .query(async ({ ctx }) => {
+  businessInvites: roleProtectedProcedure("owner", "admin").query(
+    async ({ ctx }) => {
       return membersService.getBusinessInvites(ctx.businessId!);
-    }),
+    },
+  ),
 
   updateBaseCurrency: protectedProcedure
     .input(z.object({ currency: z.string() }))
@@ -164,11 +201,20 @@ export const businessRouter = t.router({
     )
     .mutation(async ({ ctx, input }) => {
       if (input.role) {
-        const members = await membershipRepository.findByBusiness(ctx.businessId!);
+        const members = await membershipRepository.findByBusiness(
+          ctx.businessId!,
+        );
         const target = members.find((m) => m.id === input.memberId);
-        if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "Member not found" });
+        if (!target)
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Member not found",
+          });
         if (input.role === "owner" && ctx.membershipRole !== "owner") {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Only owners can promote to owner" });
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only owners can promote to owner",
+          });
         }
         return membersService.updateMemberRole(input.memberId, input.role);
       }
@@ -186,14 +232,94 @@ export const banksRouter = t.router({
 });
 
 const FALLBACK_INSTITUTIONS = [
-  { id: "ng_001", name: "First Bank of Nigeria", logo: null, popularity: 100, availableHistory: 90, maximumConsentValidity: null, provider: "nomba", type: null, countries: ["NG"] },
-  { id: "ng_002", name: "GTBank (Guaranty Trust Bank)", logo: null, popularity: 95, availableHistory: 90, maximumConsentValidity: null, provider: "nomba", type: null, countries: ["NG"] },
-  { id: "ng_003", name: "Access Bank", logo: null, popularity: 90, availableHistory: 90, maximumConsentValidity: null, provider: "nomba", type: null, countries: ["NG"] },
-  { id: "ng_004", name: "Zenith Bank", logo: null, popularity: 85, availableHistory: 90, maximumConsentValidity: null, provider: "nomba", type: null, countries: ["NG"] },
-  { id: "ng_005", name: "United Bank for Africa (UBA)", logo: null, popularity: 80, availableHistory: 90, maximumConsentValidity: null, provider: "nomba", type: null, countries: ["NG"] },
-  { id: "ng_006", name: "Kuda Bank", logo: null, popularity: 75, availableHistory: 90, maximumConsentValidity: null, provider: "nomba", type: null, countries: ["NG"] },
-  { id: "ng_007", name: "Moniepoint Microfinance Bank", logo: null, popularity: 70, availableHistory: 90, maximumConsentValidity: null, provider: "nomba", type: null, countries: ["NG"] },
-  { id: "ng_008", name: "Opay", logo: null, popularity: 65, availableHistory: 90, maximumConsentValidity: null, provider: "nomba", type: null, countries: ["NG"] },
+  {
+    id: "ng_001",
+    name: "First Bank of Nigeria",
+    logo: null,
+    popularity: 100,
+    availableHistory: 90,
+    maximumConsentValidity: null,
+    provider: "nomba",
+    type: null,
+    countries: ["NG"],
+  },
+  {
+    id: "ng_002",
+    name: "GTBank (Guaranty Trust Bank)",
+    logo: null,
+    popularity: 95,
+    availableHistory: 90,
+    maximumConsentValidity: null,
+    provider: "nomba",
+    type: null,
+    countries: ["NG"],
+  },
+  {
+    id: "ng_003",
+    name: "Access Bank",
+    logo: null,
+    popularity: 90,
+    availableHistory: 90,
+    maximumConsentValidity: null,
+    provider: "nomba",
+    type: null,
+    countries: ["NG"],
+  },
+  {
+    id: "ng_004",
+    name: "Zenith Bank",
+    logo: null,
+    popularity: 85,
+    availableHistory: 90,
+    maximumConsentValidity: null,
+    provider: "nomba",
+    type: null,
+    countries: ["NG"],
+  },
+  {
+    id: "ng_005",
+    name: "United Bank for Africa (UBA)",
+    logo: null,
+    popularity: 80,
+    availableHistory: 90,
+    maximumConsentValidity: null,
+    provider: "nomba",
+    type: null,
+    countries: ["NG"],
+  },
+  {
+    id: "ng_006",
+    name: "Kuda Bank",
+    logo: null,
+    popularity: 75,
+    availableHistory: 90,
+    maximumConsentValidity: null,
+    provider: "nomba",
+    type: null,
+    countries: ["NG"],
+  },
+  {
+    id: "ng_007",
+    name: "Moniepoint Microfinance Bank",
+    logo: null,
+    popularity: 70,
+    availableHistory: 90,
+    maximumConsentValidity: null,
+    provider: "nomba",
+    type: null,
+    countries: ["NG"],
+  },
+  {
+    id: "ng_008",
+    name: "Opay",
+    logo: null,
+    popularity: 65,
+    availableHistory: 90,
+    maximumConsentValidity: null,
+    provider: "nomba",
+    type: null,
+    countries: ["NG"],
+  },
 ];
 
 export const institutionsRouter = t.router({
@@ -213,5 +339,7 @@ export const institutionsRouter = t.router({
 });
 
 export const overviewRouter = t.router({
-  summary: protectedProcedure.query(async ({ ctx }) => overviewService.getSummary(ctx.user.id)),
+  summary: protectedProcedure.query(async ({ ctx }) =>
+    overviewService.getSummary(ctx.user.id),
+  ),
 });

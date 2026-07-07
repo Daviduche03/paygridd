@@ -1,7 +1,7 @@
-import { env } from "@/config/env";
-import { signToken } from "@/utils/jwt";
-import { userRepository } from "@/repositories/user.repository";
 import { db } from "@/config/db";
+import { env } from "@/config/env";
+import { userRepository } from "@/repositories/user.repository";
+import { signToken } from "@/utils/jwt";
 
 interface GoogleTokenResponse {
   access_token: string;
@@ -50,17 +50,21 @@ export const authService = {
       }),
     });
 
-    const tokenData = await tokenRes.json() as GoogleTokenResponse;
+    const tokenData = (await tokenRes.json()) as GoogleTokenResponse;
     if (!tokenData.access_token) {
       throw new Error("Failed to get Google access token");
     }
 
     // Get user info
-    const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
-    });
+    const userInfoRes = await fetch(
+      "https://www.googleapis.com/oauth2/v2/userinfo",
+      {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      },
+    );
 
-    const googleUser: GoogleUserInfo = await userInfoRes.json() as GoogleUserInfo;
+    const googleUser: GoogleUserInfo =
+      (await userInfoRes.json()) as GoogleUserInfo;
 
     if (!googleUser.email) {
       throw new Error("No email from Google");

@@ -1,9 +1,21 @@
 "use client";
 
 import type { RouterOutputs } from "api";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { useMemo, useState } from "react";
+import { useCopyToClipboard } from "usehooks-ts";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "ui/alert-dialog";
 import { Badge } from "ui/badge";
 import { Button } from "ui/button";
 import {
@@ -41,6 +53,8 @@ import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useStableQuery } from "@/hooks/use-stable-query";
 import { useTRPC } from "@/trpc/client";
 import { formatAmount } from "@/utils/format";
+import { getUrl } from "@/utils/environment";
+import { downloadFile } from "@/lib/download";
 
 type InvoiceRow = RouterOutputs["invoice"]["get"]["data"][number];
 
@@ -83,11 +97,70 @@ function InvoiceDetailView({
   onBack: () => void;
 }) {
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
   const { setParams } = useInvoiceParams();
+  const { toast } = useToast();
+  const [, copy] = useCopyToClipboard();
 
   const { data: invoice, isLoading } = useStableQuery(
     trpc.invoice.getById.queryOptions({ id: invoiceId }),
   );
+
+  const updateInvoiceMutation = useMutation(
+    trpc.invoice.update.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: trpc.invoice.get.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.invoice.getById.queryKey({ id: invoiceId }) });
+      },
+    }),
+  );
+
+  const verifyAndMarkAsPaidMutation = useMutation(
+    trpc.invoice.verifyAndMarkAsPaid.mutationOptions({
+      onSuccess: (result) => {
+        queryClient.invalidateQueries({ queryKey: trpc.invoice.get.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.invoice.getById.queryKey({ id: invoiceId }) });
+        if (result.matched) {
+          toast({ duration: 3500, title: result.message, variant: "success" });
+        } else {
+          toast({ duration: 5000, title: result.message, variant: "warning" });
+        }
+      },
+      onError: (err) => {
+        toast({ duration: 5000, title: err.message, variant: "error" });
+      },
+    }),
+  );
+
+  const remindMutation = useMutation(
+    trpc.invoice.remind.mutationOptions({
+      onSuccess: () => {
+        toast({ duration: 2500, title: "Reminder sent", variant: "success" });
+      },
+      onError: (err) => {
+        toast({ title: "Failed to send reminder", description: err.message, variant: "destructive" });
+      },
+    }),
+  );
+
+  const handleMarkAsPaid = () => {
+    verifyAndMarkAsPaidMutation.mutate({ id: invoiceId });
+  };
+
+  const handleSendReminder = () => {
+    remindMutation.mutate({ id: invoiceId, date: new Date().toISOString() });
+  };
+
+  const handleCopyLink = () => {
+    const url = `${getUrl()}/i/${invoiceId}`;
+    copy(url);
+    toast({ title: "Invoice link copied" });
+  };
+
+  const handleDownload = () => {
+    const downloadUrl = `${getUrl()}/files/download/invoice?id=${invoiceId}`;
+    downloadFile(downloadUrl, `${invoice?.invoiceNumber || "invoice"}.pdf`);
+  };
 
   if (isLoading) {
     return <InvoiceDetailsSkeleton />;
@@ -164,7 +237,7 @@ function InvoiceDetailView({
         </div>
 
         <div className="flex items-center gap-2 pt-3 border-t border-border">
-          <Button variant="outline" size="sm" disabled>
+          <Button variant="outline" size="sm" onClick={handleCopyLink}>
             <Icons.Copy className="size-3.5 mr-1.5" />
             Copy Invoice Link
           </Button>
@@ -277,15 +350,42 @@ function InvoiceDetailView({
       <div className="flex items-center gap-2">
         {invoice.status !== "paid" && invoice.status !== "canceled" && (
           <>
-            <Button variant="outline" size="sm" disabled>
-              Send Reminder
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSendReminder}
+              disabled={remindMutation.isPending}
+            >
+              {remindMutation.isPending ? "Sending..." : "Send Reminder"}
             </Button>
-            <Button variant="outline" size="sm" disabled>
-              Mark as Paid
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={verifyAndMarkAsPaidMutation.isPending}
+                >
+                  Mark as Paid
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Verify Nomba payment?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will check Nomba transaction records for this invoice's virtual account. If a matching payment is found, the invoice will be marked as paid.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleMarkAsPaid}>
+                    {verifyAndMarkAsPaidMutation.isPending ? "Verifying..." : "Verify & Mark as Paid"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </>
         )}
-        <Button variant="outline" size="sm" disabled>
+        <Button variant="outline" size="sm" onClick={handleDownload}>
           Download PDF
         </Button>
       </div>

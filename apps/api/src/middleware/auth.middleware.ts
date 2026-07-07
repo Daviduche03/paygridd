@@ -1,7 +1,7 @@
-import type { Response, NextFunction } from "express";
+import type { NextFunction, Response } from "express";
 import type { AuthenticatedRequest } from "@/types";
-import { logger } from "@/utils/logger";
 import { verifyToken } from "@/utils/jwt";
+import { logger } from "@/utils/logger";
 
 /**
  * JWT auth middleware (replaces Supabase).
@@ -10,7 +10,7 @@ import { verifyToken } from "@/utils/jwt";
 export async function authMiddleware(
   req: AuthenticatedRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   let token: string | undefined;
 
@@ -23,7 +23,10 @@ export async function authMiddleware(
   }
 
   if (!token) {
-    return res.status(401).json({ success: false, error: "Missing or invalid Authorization header" });
+    return res.status(401).json({
+      success: false,
+      error: "Missing or invalid Authorization header",
+    });
   }
 
   const payload = verifyToken(token);
@@ -40,5 +43,3 @@ export async function authMiddleware(
 
   next();
 }
-
-

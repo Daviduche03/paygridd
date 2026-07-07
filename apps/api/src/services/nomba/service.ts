@@ -48,7 +48,5 @@ export const nombaService = {
     return api.lookupAccount(accountNumber, bankCode);
   },
 
-
-
   provider,
 };

@@ -17,12 +17,6 @@ import { getAccessToken } from "@/utils/session";
 
 export type RateLimitInfo = { limit: number; remaining: number };
 
-export type ConnectedApp = {
-  slug: string;
-  name: string;
-  logo: string | null;
-};
-
 export type ChatState = ReturnType<typeof useChat> & {
   inputValue: string;
   setInputValue: (v: string) => void;
@@ -30,11 +24,25 @@ export type ChatState = ReturnType<typeof useChat> & {
   setChatTitle: (v: string | null) => void;
   rateLimit: RateLimitInfo | null;
   rateLimitExceeded: boolean;
-  mentionedApps: ConnectedApp[];
-  addMentionedApp: (app: ConnectedApp) => void;
-  removeMentionedApp: (slug: string) => void;
-  clearMentionedApps: () => void;
+  conversationId: string;
+  resetConversation: () => void;
 };
+
+const STORAGE_KEY = "paygrid_conversation_id";
+
+function loadConversationId(): string {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return saved;
+  } catch {}
+  const id = crypto.randomUUID();
+  try { localStorage.setItem(STORAGE_KEY, id); } catch {}
+  return id;
+}
+
+function saveConversationId(id: string) {
+  try { localStorage.setItem(STORAGE_KEY, id); } catch {}
+}
 
 const ChatContext = createContext<ChatState | null>(null);
 
@@ -51,30 +59,21 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [chatTitle, setChatTitle] = useState<string | null>(null);
   const [rateLimit, setRateLimit] = useState<RateLimitInfo | null>(null);
   const [rateLimitExceeded, setRateLimitExceeded] = useState(false);
-  const [mentionedApps, setMentionedApps] = useState<ConnectedApp[]>([]);
+  const [conversationId, setConversationId] = useState(loadConversationId);
+  const conversationIdRef = useRef(conversationId);
+  conversationIdRef.current = conversationId;
 
-  const mentionedAppsRef = useRef(mentionedApps);
-  mentionedAppsRef.current = mentionedApps;
-
-  const addMentionedApp = useCallback((app: ConnectedApp) => {
-    setMentionedApps((prev) => {
-      if (prev.some((a) => a.slug === app.slug)) return prev;
-      return [...prev, app];
-    });
-  }, []);
-
-  const removeMentionedApp = useCallback((slug: string) => {
-    setMentionedApps((prev) => prev.filter((a) => a.slug !== slug));
-  }, []);
-
-  const clearMentionedApps = useCallback(() => {
-    setMentionedApps([]);
+  const resetConversation = useCallback(() => {
+    const id = crypto.randomUUID();
+    saveConversationId(id);
+    setConversationId(id);
+    setChatTitle(null);
   }, []);
 
   const chatTransport = useMemo(
     () =>
       new DefaultChatTransport({
-        api: `${process.env.NEXT_PUBLIC_API_URL}/chat`,
+        api: "/chat",
         headers: async () => {
           const token = await getAccessToken();
           const timezone =
@@ -85,10 +84,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           } as Record<string, string>;
         },
         body: () => ({
-          mentionedApps: mentionedAppsRef.current.map((a) => ({
-            slug: a.slug,
-            name: a.name,
-          })),
+          conversationId: conversationIdRef.current,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? "UTC",
           localTime: new Date().toISOString(),
         }),
@@ -98,6 +94,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const chat = useChat({
     transport: chatTransport,
+    onResponse: (response) => {
+      const serverId = response.headers.get("X-Conversation-Id");
+      if (serverId) {
+        setConversationId(serverId);
+        saveConversationId(serverId);
+      }
+    },
     onData: (part: any) => {
       if (part.type === "data-title" && part.data?.title) {
         setChatTitle(part.data.title);
@@ -135,10 +138,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         setChatTitle,
         rateLimit,
         rateLimitExceeded,
-        mentionedApps,
-        addMentionedApp,
-        removeMentionedApp,
-        clearMentionedApps,
+        conversationId,
+        resetConversation,
       }}
     >
       {children}

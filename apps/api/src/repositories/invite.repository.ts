@@ -18,7 +18,11 @@ export interface Invite {
 }
 
 export const inviteRepository = {
-  async findByBusiness(businessId: string): Promise<(Invite & { inviter: { id: string; fullName: string | null; email: string } | null })[]> {
+  async findByBusiness(businessId: string): Promise<
+    (Invite & {
+      inviter: { id: string; fullName: string | null; email: string } | null;
+    })[]
+  > {
     const rows = await db
       .select({
         id: businessInvites.id,
@@ -38,12 +42,19 @@ export const inviteRepository = {
       })
       .from(businessInvites)
       .leftJoin(users, eq(businessInvites.invitedBy, users.id))
-      .where(and(eq(businessInvites.businessId, businessId), eq(businessInvites.status, "pending")));
+      .where(
+        and(
+          eq(businessInvites.businessId, businessId),
+          eq(businessInvites.status, "pending"),
+        ),
+      );
 
     return rows as any;
   },
 
-  async findByEmail(email: string): Promise<(Invite & { businessName: string })[]> {
+  async findByEmail(
+    email: string,
+  ): Promise<(Invite & { businessName: string })[]> {
     const { businesses } = await import("@/db/schema");
     const rows = await db
       .select({
@@ -60,7 +71,12 @@ export const inviteRepository = {
       })
       .from(businessInvites)
       .leftJoin(businesses, eq(businessInvites.businessId, businesses.id))
-      .where(and(eq(businessInvites.email, email), eq(businessInvites.status, "pending")));
+      .where(
+        and(
+          eq(businessInvites.email, email),
+          eq(businessInvites.status, "pending"),
+        ),
+      );
 
     return rows as any;
   },
@@ -96,7 +112,9 @@ export const inviteRepository = {
     invitedBy: string;
     expiresAt?: string;
   }): Promise<Invite> {
-    const expiresAt = data.expiresAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const expiresAt =
+      data.expiresAt ??
+      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
     const [row] = await db
       .insert(businessInvites)

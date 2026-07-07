@@ -8,9 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "u
 import { useToast } from "ui/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Circle, Lock, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ScrollableContent } from "@/components/scrollable-content";
 import { SettingsTabs } from "@/components/settings-tabs";
+import { ConnectBankNigeriaStep } from "@/components/onboarding/steps/connect-bank-nigeria-step";
 import { useTRPC } from "@/trpc/client";
 
 const TIER_INFO: Record<string, { name: string; color: string; description: string }> = {
@@ -88,6 +89,12 @@ export default function KycSettingsPage() {
       },
     }),
   });
+
+  const handleBankComplete = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: trpc.business.get.queryKey() });
+    queryClient.invalidateQueries({ queryKey: trpc.business.list.queryKey() });
+    toast({ duration: 2500, title: "Bank account connected", variant: "success" });
+  }, [queryClient, trpc]);
 
   if (isLoading) {
     return (
@@ -306,6 +313,12 @@ export default function KycSettingsPage() {
               </CardContent>
             </Card>
           )}
+
+          <Card>
+            <CardContent>
+              <ConnectBankNigeriaStep onComplete={handleBankComplete} />
+            </CardContent>
+          </Card>
         </div>
       </div>
     </ScrollableContent>

@@ -1,5 +1,8 @@
 import type { Request, Response } from "express";
-import { NombaWebhookError, nombaWebhookService } from "@/services/nomba/webhook.service";
+import {
+  NombaWebhookError,
+  nombaWebhookService,
+} from "@/services/nomba/webhook.service";
 import type { NombaWebhookPayload } from "@/types/nomba-webhook";
 
 function headerValue(req: Request, name: string): string | undefined {
@@ -37,5 +40,4 @@ export const nombaWebhookController = {
       throw error;
     }
   },
-
 };

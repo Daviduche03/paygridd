@@ -1,12 +1,16 @@
-import { invoiceRepository } from "@/repositories/invoice.repository";
-import { virtualAccountRepository } from "@/repositories/virtual-account.repository";
-import { virtualAccountService } from "@/services/virtual-account.service";
-import { emailService } from "@/services/email.service";
-import { customerRepository } from "@/repositories/customer.repository";
-import { businessRepository } from "@/repositories/business.repository";
-import { getBusinessIdForUser } from "@/utils/business";
-import { env } from "@/config/env";
 import { pool } from "@/config/db";
+import { env } from "@/config/env";
+import { businessRepository } from "@/repositories/business.repository";
+import { customerRepository } from "@/repositories/customer.repository";
+import { invoiceRepository } from "@/repositories/invoice.repository";
+import { transactionRepository } from "@/repositories/transaction.repository";
+import { virtualAccountRepository } from "@/repositories/virtual-account.repository";
+import { emailService } from "@/services/email.service";
+import { NombaApi } from "@/services/nomba/nomba-api";
+import type { VirtualAccountTransactionResult } from "@/services/nomba/types";
+import { reconciliationService } from "@/services/reconciliation.service";
+import { virtualAccountService } from "@/services/virtual-account.service";
+import { getBusinessIdForUser } from "@/utils/business";
 
 type InvoiceStatus =
   | "draft"
@@ -107,7 +111,11 @@ function resolveDisplayStatus(
   return status as InvoiceStatus;
 }
 
-function derivePaymentStatus(amount: number, amountPaid: number, status: string) {
+function derivePaymentStatus(
+  amount: number,
+  amountPaid: number,
+  status: string,
+) {
   if (status === "paid" || (amount > 0 && amountPaid == amount)) {
     return "matched" as const;
   }
@@ -176,10 +184,17 @@ function parseInvoiceData(data: RawInvoiceData) {
   };
 }
 
-function mapListRow(row: Awaited<ReturnType<typeof invoiceRepository.list>>["data"][number]) {
+function mapListRow(
+  row: Awaited<ReturnType<typeof invoiceRepository.list>>["data"][number],
+) {
   const amount = toNumber(row.amount);
   const amountPaid = toNumber(row.amountPaid);
-  const displayStatus = resolveDisplayStatus(row.status, row.dueDate, amount, amountPaid);
+  const displayStatus = resolveDisplayStatus(
+    row.status,
+    row.dueDate,
+    amount,
+    amountPaid,
+  );
 
   return {
     id: row.id,
@@ -230,7 +245,12 @@ function mapDetailRow(
 ) {
   const amount = toNumber(row.amount);
   const amountPaid = toNumber(row.amountPaid);
-  const displayStatus = resolveDisplayStatus(row.status, row.dueDate, amount, amountPaid);
+  const displayStatus = resolveDisplayStatus(
+    row.status,
+    row.dueDate,
+    amount,
+    amountPaid,
+  );
 
   return {
     id: row.id,
@@ -323,12 +343,10 @@ async function nextInvoiceNumber(businessId: string) {
 function buildTextDoc(lines: string[]) {
   return {
     type: "doc" as const,
-    content: lines
-      .filter(Boolean)
-      .map((text) => ({
-        type: "paragraph",
-        content: [{ type: "text", text }],
-      })),
+    content: lines.filter(Boolean).map((text) => ({
+      type: "paragraph",
+      content: [{ type: "text", text }],
+    })),
   };
 }
 
@@ -375,11 +393,18 @@ async function ensureVirtualAccountForInvoice(
 }
 
 function mapPublicInvoice(
-  row: NonNullable<Awaited<ReturnType<typeof invoiceRepository.findPublicById>>>,
+  row: NonNullable<
+    Awaited<ReturnType<typeof invoiceRepository.findPublicById>>
+  >,
 ) {
   const amount = toNumber(row.amount);
   const amountPaid = toNumber(row.amountPaid);
-  const displayStatus = resolveDisplayStatus(row.status, row.dueDate, amount, amountPaid);
+  const displayStatus = resolveDisplayStatus(
+    row.status,
+    row.dueDate,
+    amount,
+    amountPaid,
+  );
   const lineItems = normalizeLineItems(row.lineItems).map((item) => ({
     name: item.description,
     quantity: item.quantity,
@@ -396,15 +421,22 @@ function mapPublicInvoice(
 
   const paymentLines = hasVirtualAccount
     ? [
-        row.virtualAccountBankName ? `Bank: ${row.virtualAccountBankName}` : null,
-        row.virtualAccountName ? `Account name: ${row.virtualAccountName}` : null,
-        row.virtualAccountNumber ? `Account number: ${row.virtualAccountNumber}` : null,
+        row.virtualAccountBankName
+          ? `Bank: ${row.virtualAccountBankName}`
+          : null,
+        row.virtualAccountName
+          ? `Account name: ${row.virtualAccountName}`
+          : null,
+        row.virtualAccountNumber
+          ? `Account number: ${row.virtualAccountNumber}`
+          : null,
         `Amount: ${row.currency} ${amount.toLocaleString("en-NG")}`,
         row.invoiceNumber ? `Reference: ${row.invoiceNumber}` : null,
       ].filter((line): line is string => Boolean(line))
     : [];
 
-  const paymentDetails = paymentLines.length > 0 ? buildTextDoc(paymentLines) : null;
+  const paymentDetails =
+    paymentLines.length > 0 ? buildTextDoc(paymentLines) : null;
 
   const template = {
     title: "Invoice",
@@ -531,7 +563,13 @@ export const invoiceService = {
     const resolvedStatuses =
       statuses && statuses.length > 0
         ? statuses
-        : (["draft", "scheduled", "unpaid", "overdue", "paid"] as InvoiceStatus[]);
+        : ([
+            "draft",
+            "scheduled",
+            "unpaid",
+            "overdue",
+            "paid",
+          ] as InvoiceStatus[]);
 
     const summary = await invoiceRepository.getSummaryByStatuses(
       businessId,
@@ -676,10 +714,7 @@ export const invoiceService = {
     if (!row) return null;
 
     const payableStatuses = ["unpaid", "overdue", "scheduled"];
-    if (
-      payableStatuses.includes(row.status) &&
-      toNumber(row.amount) > 0
-    ) {
+    if (payableStatuses.includes(row.status) && toNumber(row.amount) > 0) {
       try {
         await ensureVirtualAccountForInvoice(row.businessId, {
           id: row.id,
@@ -783,7 +818,8 @@ export const invoiceService = {
       amount: toNumber(existing.amount),
       currency: existing.currency,
       status,
-      issueDate: input.scheduledAt ?? existing.issueDate ?? new Date().toISOString(),
+      issueDate:
+        input.scheduledAt ?? existing.issueDate ?? new Date().toISOString(),
       dueDate: existing.dueDate,
       lineItems: existing.lineItems,
     });
@@ -799,17 +835,21 @@ export const invoiceService = {
       ]);
       const customerEmail = customer?.billingEmail ?? customer?.email;
       if (customerEmail && business?.name && customer?.name) {
-        emailService.sendInvoiceNotification({
-          to: customerEmail,
-          customerName: customer.name,
-          businessName: business.name,
-          invoiceNumber: existing.invoiceNumber ?? "",
-          amount: new Intl.NumberFormat("en-NG", { minimumFractionDigits: 2 }).format(toNumber(existing.amount)),
-          dueDate: formatDate(existing.dueDate),
-          paymentUrl: `${env.FRONTEND_URL}/i/${saved.id}`,
-        }).catch((err) => {
-          console.error("[EMAIL FAILED] Invoice notification:", err);
-        });
+        emailService
+          .sendInvoiceNotification({
+            to: customerEmail,
+            customerName: customer.name,
+            businessName: business.name,
+            invoiceNumber: existing.invoiceNumber ?? "",
+            amount: new Intl.NumberFormat("en-NG", {
+              minimumFractionDigits: 2,
+            }).format(toNumber(existing.amount)),
+            dueDate: formatDate(existing.dueDate),
+            paymentUrl: `${env.FRONTEND_URL}/i/${saved.id}`,
+          })
+          .catch((err) => {
+            console.error("[EMAIL FAILED] Invoice notification:", err);
+          });
       }
     }
 
@@ -830,15 +870,13 @@ export const invoiceService = {
     const hasAmountData =
       data.amount != null ||
       (Array.isArray(data.lineItems) && data.lineItems.length > 0);
-    const amount = hasAmountData ? calculateAmount(data) : toNumber(existing.amount);
+    const amount = hasAmountData
+      ? calculateAmount(data)
+      : toNumber(existing.amount);
     const requestedStatus = data.status ?? (existing.status as InvoiceStatus);
-    let status = requestedStatus;
+    const status = requestedStatus;
     let amountPaid = toNumber(existing.amountPaid);
     let paidAt = existing.paidAt;
-
-    if (status === "paid" && existing.status !== "paid") {
-      throw new Error("Cannot mark invoice as paid via update. Use the payment flow instead.");
-    }
 
     if (status === "paid") {
       amountPaid = amount;
@@ -848,7 +886,8 @@ export const invoiceService = {
     const saved = await invoiceRepository.upsert({
       businessId,
       id,
-      customerId: data.customerId !== undefined ? data.customerId : existing.customerId,
+      customerId:
+        data.customerId !== undefined ? data.customerId : existing.customerId,
       virtualAccountId:
         data.virtualAccountId !== undefined
           ? data.virtualAccountId
@@ -870,6 +909,226 @@ export const invoiceService = {
     }
 
     return { success: true, id: saved.id };
+  },
+
+  async remind(userId: string, id: string) {
+    const businessId = await getBusinessIdForUser(userId);
+    if (!businessId) {
+      throw new Error("Business required");
+    }
+
+    const row = await invoiceRepository.findById(businessId, id);
+    if (!row) {
+      throw new Error("Invoice not found");
+    }
+
+    if (!row.customerId) {
+      throw new Error("Invoice has no customer");
+    }
+
+    const [customer, business] = await Promise.all([
+      customerRepository.findById(businessId, row.customerId),
+      businessRepository.findById(businessId),
+    ]);
+
+    const customerEmail = customer?.billingEmail ?? customer?.email;
+    if (!customerEmail) {
+      throw new Error("Customer has no email address");
+    }
+
+    const amount = toNumber(row.amount);
+    const amountPaid = toNumber(row.amountPaid);
+    const balance = amount - amountPaid;
+
+    await emailService.sendInvoiceNotification({
+      to: customerEmail,
+      customerName: customer?.name ?? "Customer",
+      businessName: business?.name ?? "Business",
+      invoiceNumber: row.invoiceNumber ?? "",
+      amount: balance.toLocaleString("en-NG", { minimumFractionDigits: 2 }),
+      dueDate: row.dueDate
+        ? new Date(row.dueDate).toLocaleDateString("en-NG")
+        : "N/A",
+      paymentUrl: `${env.FRONTEND_URL}/i/${id}`,
+    });
+
+    return { success: true };
+  },
+
+  async duplicate(userId: string, id: string) {
+    const businessId = await getBusinessIdForUser(userId);
+    if (!businessId) {
+      throw new Error("Business required");
+    }
+
+    const row = await invoiceRepository.findById(businessId, id);
+    if (!row) {
+      throw new Error("Invoice not found");
+    }
+
+    const newInvoiceNumber = await nextInvoiceNumber(businessId);
+    const newId = crypto.randomUUID();
+
+    const saved = await invoiceRepository.upsert({
+      businessId,
+      id: newId,
+      customerId: row.customerId,
+      virtualAccountId: null,
+      invoiceNumber: newInvoiceNumber,
+      amount: toNumber(row.amount),
+      amountPaid: 0,
+      currency: row.currency,
+      status: "draft",
+      issueDate: new Date().toISOString(),
+      dueDate: row.dueDate,
+      lineItems: row.lineItems,
+    });
+
+    if (!saved) {
+      throw new Error("Failed to duplicate invoice");
+    }
+
+    return { id: saved.id, invoiceNumber: newInvoiceNumber };
+  },
+
+  async cancelSchedule(userId: string, id: string) {
+    const businessId = await getBusinessIdForUser(userId);
+    if (!businessId) {
+      throw new Error("Business required");
+    }
+
+    const existing = await invoiceRepository.findById(businessId, id);
+    if (!existing) {
+      throw new Error("Invoice not found");
+    }
+
+    const saved = await invoiceRepository.upsert({
+      businessId,
+      id,
+      customerId: existing.customerId,
+      invoiceNumber: existing.invoiceNumber,
+      amount: toNumber(existing.amount),
+      status: "draft",
+    });
+
+    if (!saved) {
+      throw new Error("Failed to cancel schedule");
+    }
+
+    return { success: true };
+  },
+
+  async verifyAndMarkAsPaid(userId: string, id: string) {
+    const businessId = await getBusinessIdForUser(userId);
+    if (!businessId) {
+      throw new Error("Business required");
+    }
+
+    const invoice = await invoiceRepository.findById(businessId, id);
+    if (!invoice) {
+      throw new Error("Invoice not found");
+    }
+
+    if (invoice.status === "paid") {
+      throw new Error("Invoice is already paid");
+    }
+
+    if (!invoice.virtualAccountId) {
+      throw new Error("Invoice has no virtual account");
+    }
+
+    const va = await virtualAccountRepository.findById(
+      businessId,
+      invoice.virtualAccountId,
+    );
+    if (!va || !va.accountNumber) {
+      throw new Error("Virtual account not found or has no account number");
+    }
+
+    const nomba = new NombaApi();
+    const transactions = await nomba.getVirtualAccountTransactions({
+      virtualAccount: va.accountNumber,
+    });
+
+    const postedCredits = transactions.results.filter(
+      (t) => t.status === "posted" && t.type === "credit",
+    );
+
+    if (postedCredits.length === 0) {
+      return {
+        matched: false,
+        message: "No payment found for this invoice.",
+      };
+    }
+
+    postedCredits.sort(
+      (a, b) =>
+        new Date(b.timeCreated).getTime() - new Date(a.timeCreated).getTime(),
+    );
+
+    let matchingTx: VirtualAccountTransactionResult;
+
+    if (va.kind === "dynamic") {
+      matchingTx = postedCredits[0]!;
+    } else {
+      const remainingDue =
+        toNumber(invoice.amount) - toNumber(invoice.amountPaid);
+      const amountMatch = postedCredits.find(
+        (t) => Number(t.amount) >= remainingDue,
+      );
+      if (!amountMatch) {
+        const amounts = postedCredits
+          .map((t) => `₦${Number(t.amount).toLocaleString()}`)
+          .join(", ");
+        return {
+          matched: false,
+          message: `No Nomba transaction matches the remaining due of ₦${remainingDue.toLocaleString()}. Found transactions: ${amounts}`,
+        };
+      }
+      matchingTx = amountMatch;
+    }
+
+    const txAmount = Number(matchingTx.amount);
+    const business = await businessRepository.findById(businessId);
+    const rate = Number(business?.platformChargeRate ?? 0);
+    const platformFee = rate > 0 ? Math.round(txAmount * rate) / 100 : 0;
+    const netAmount = txAmount - platformFee;
+
+    const created = await transactionRepository.createFromWebhook({
+      businessId,
+      virtualAccountId: invoice.virtualAccountId,
+      customerId: invoice.customerId,
+      nombaTransactionId: matchingTx.id,
+      nombaRequestId: null,
+      eventType: "manual_reconciliation",
+      type: "credit",
+      amount: txAmount,
+      platformFee,
+      netAmount,
+      currency: matchingTx.currency ?? "NGN",
+      status: "posted",
+      senderName: matchingTx.senderName ?? matchingTx.ktaSenderName ?? null,
+      senderBank: matchingTx.bankCode ?? null,
+      narration: matchingTx.narration ?? null,
+      occurredAt: matchingTx.timeCreated,
+    });
+
+    if (!created) {
+      throw new Error("Failed to create transaction record");
+    }
+
+    await reconciliationService.reconcileVirtualAccountPayment({
+      businessId,
+      virtualAccountId: invoice.virtualAccountId,
+      transactionId: created.id,
+      amount: Number(matchingTx.amount),
+    });
+
+    return {
+      matched: true,
+      message: `Payment of ₦${Number(matchingTx.amount).toLocaleString()} verified and invoice marked as paid`,
+      transactionId: created.id,
+    };
   },
 
   async delete(userId: string, id: string) {

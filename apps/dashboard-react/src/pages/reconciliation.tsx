@@ -1,6 +1,7 @@
 "use client";
 
 import type { RouterOutputs } from "api";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Badge } from "ui/badge";
 import { Button } from "ui/button";
@@ -36,6 +37,7 @@ import { Skeleton } from "ui/skeleton";
 import { cn } from "ui/cn";
 import { useStableQuery } from "@/hooks/use-stable-query";
 import { useTRPC } from "@/trpc/client";
+import { useToast } from "ui/use-toast";
 
 type ListOutput = Extract<RouterOutputs["transactions"]["list"], { data: unknown }>;
 type TransactionRow = ListOutput["data"][number];
@@ -124,7 +126,17 @@ function formatDiff(diff: number | null) {
   return `${sign}${diff.toLocaleString()}`;
 }
 
-function RecoDetailView({ item, onBack }: { item: TransactionRow; onBack: () => void }) {
+function RecoDetailView({
+  item,
+  onBack,
+  onMarkResolved,
+  onNotifyCustomer,
+}: {
+  item: TransactionRow;
+  onBack: () => void;
+  onMarkResolved: (id: string) => void;
+  onNotifyCustomer: (id: string) => void;
+}) {
   const reconStyle = getReconStyle(item.reconciliation);
   const diff = item.invoiceAmount != null ? item.amount - item.invoiceAmount : null;
 
@@ -191,9 +203,8 @@ function RecoDetailView({ item, onBack }: { item: TransactionRow; onBack: () => 
       </SurfaceCard>
 
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" disabled>Retry Match</Button>
-        <Button variant="outline" size="sm" disabled>Mark as Resolved</Button>
-        <Button variant="outline" size="sm" disabled>Notify Customer</Button>
+        <Button variant="outline" size="sm" onClick={() => onMarkResolved(item.id)}>Mark as Resolved</Button>
+        <Button variant="outline" size="sm" onClick={() => onNotifyCustomer(item.id)}>Notify Customer</Button>
       </div>
 
       <Button variant="ghost" size="sm" onClick={onBack}>
@@ -206,6 +217,44 @@ function RecoDetailView({ item, onBack }: { item: TransactionRow; onBack: () => 
 
 export default function ReconciliationPage() {
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const markResolvedMutation = useMutation(
+    trpc.transactions.setReconciliationStatus.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: trpc.transactions.reconciliationSummary.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.transactions.list.queryKey() });
+        toast({ duration: 2500, title: "Marked as resolved", variant: "success" });
+      },
+      onError: (err) => {
+        toast({ duration: 5000, title: err.message, variant: "error" });
+      },
+    }),
+  );
+
+  const notifyCustomerMutation = useMutation(
+    trpc.transactions.notifyReconciliationCustomer.mutationOptions({
+      onSuccess: (result) => {
+        if (result.sent) {
+          toast({ duration: 2500, title: "Notification sent", variant: "success" });
+        } else {
+          toast({ duration: 3500, title: "No customer email on file", variant: "warning" });
+        }
+      },
+      onError: (err) => {
+        toast({ duration: 5000, title: err.message, variant: "error" });
+      },
+    }),
+  );
+
+  const handleMarkResolved = (transactionId: string) => {
+    markResolvedMutation.mutate({ transactionId, status: "matched" });
+  };
+
+  const handleNotifyCustomer = (transactionId: string) => {
+    notifyCustomerMutation.mutate({ transactionId });
+  };
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [q, setQ] = useState("");
@@ -249,7 +298,7 @@ export default function ReconciliationPage() {
               </p>
             </div>
           </div>
-          <RecoDetailView item={selectedItem} onBack={() => setSelectedId(null)} />
+          <RecoDetailView item={selectedItem} onBack={() => setSelectedId(null)} onMarkResolved={handleMarkResolved} onNotifyCustomer={handleNotifyCustomer} />
         </div>
       </ScrollableContent>
     );
@@ -384,9 +433,8 @@ export default function ReconciliationPage() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-40 bg-background border-border">
                                 <DropdownMenuItem onClick={() => setSelectedId(item.id)}>View Details</DropdownMenuItem>
-                                <DropdownMenuItem disabled>Retry Match</DropdownMenuItem>
-                                <DropdownMenuItem disabled>Mark Resolved</DropdownMenuItem>
-                                <DropdownMenuItem disabled>Notify Customer</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleMarkResolved(item.id)}>Mark Resolved</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleNotifyCustomer(item.id)}>Notify Customer</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>

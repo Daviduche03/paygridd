@@ -27,14 +27,20 @@ async function sendViaSmtp(payload: EmailPayload, from: string) {
 }
 
 export const emailService = {
-  async send(payload: EmailPayload): Promise<{ sent: boolean; provider?: string }> {
+  async send(
+    payload: EmailPayload,
+  ): Promise<{ sent: boolean; provider?: string }> {
     const from = env.FROM_EMAIL;
     if (!from) {
       if (env.NODE_ENV === "development") {
-        logger.info(`[EMAIL LOG] No email provider configured. Would send. Subject: "${payload.subject}" To: ${payload.to}`);
+        logger.info(
+          `[EMAIL LOG] No email provider configured. Would send. Subject: "${payload.subject}" To: ${payload.to}`,
+        );
         return { sent: true };
       }
-      throw new Error("FROM_EMAIL is not configured. Set FROM_EMAIL and SMTP_HOST/SMTP_USER/SMTP_PASS to send emails.");
+      throw new Error(
+        "FROM_EMAIL is not configured. Set FROM_EMAIL and SMTP_HOST/SMTP_USER/SMTP_PASS to send emails.",
+      );
     }
 
     const hasSmtp = env.SMTP_HOST && env.SMTP_USER;
@@ -45,16 +51,22 @@ export const emailService = {
         logger.info(`Email sent via SMTP to ${payload.to}: ${payload.subject}`);
         return { sent: true, provider: "smtp" };
       } catch (error) {
-        logger.error(`Failed to send email via SMTP to ${payload.to}: ${error}`);
+        logger.error(
+          `Failed to send email via SMTP to ${payload.to}: ${error}`,
+        );
         throw error;
       }
     }
 
     if (env.NODE_ENV === "production") {
-      throw new Error("No email provider configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS, and FROM_EMAIL to send emails.");
+      throw new Error(
+        "No email provider configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS, and FROM_EMAIL to send emails.",
+      );
     }
 
-    logger.info(`[EMAIL LOG] No email provider configured. Would send. Subject: "${payload.subject}" To: ${payload.to}`);
+    logger.info(
+      `[EMAIL LOG] No email provider configured. Would send. Subject: "${payload.subject}" To: ${payload.to}`,
+    );
     return { sent: true };
   },
 
@@ -67,7 +79,15 @@ export const emailService = {
     dueDate: string;
     paymentUrl: string;
   }) {
-    const { to, customerName, businessName, invoiceNumber, amount, dueDate, paymentUrl } = params;
+    const {
+      to,
+      customerName,
+      businessName,
+      invoiceNumber,
+      amount,
+      dueDate,
+      paymentUrl,
+    } = params;
     return this.send({
       to,
       subject: `Invoice ${invoiceNumber} from ${businessName}`,
@@ -132,7 +152,8 @@ export const emailService = {
     amount: string;
     paidAt: string;
   }) {
-    const { to, customerName, businessName, invoiceNumber, amount, paidAt } = params;
+    const { to, customerName, businessName, invoiceNumber, amount, paidAt } =
+      params;
     return this.send({
       to,
       subject: `Payment Received — Invoice ${invoiceNumber}`,
@@ -174,6 +195,79 @@ export const emailService = {
                   </td>
                 </tr>
               </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 16px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0;">
+              <p style="margin: 0; font-size: 12px; color: #94a3b8;">PayGrid — Programmable Accounts Receivable</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
+    });
+  },
+
+  async sendOverpaymentNotification(params: {
+    to: string;
+    customerName: string;
+    businessName: string;
+    invoiceNumber: string;
+    amountPaid: string;
+    invoiceAmount: string;
+    excessAmount: string;
+  }) {
+    const { to, customerName, businessName, invoiceNumber, amountPaid, invoiceAmount, excessAmount } = params;
+    return this.send({
+      to,
+      subject: `Overpayment Received — Invoice ${invoiceNumber}`,
+      html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f6f8fa;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f6f8fa; padding: 32px 0;">
+    <tr>
+      <td align="center">
+        <table width="480" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden;">
+          <tr>
+            <td style="padding: 32px 32px 0;">
+              <div style="width: 48px; height: 48px; background-color: #fef3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; font-size: 24px;">!</div>
+              <h1 style="font-size: 20px; font-weight: 600; margin: 0 0 4px;">Overpayment Received</h1>
+              <p style="color: #64748b; font-size: 14px; margin: 0 0 24px;">Invoice <strong>${invoiceNumber}</strong> has been paid with an excess amount.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                    <p style="margin: 0; font-size: 12px; color: #64748b;">Invoice Amount</p>
+                    <p style="margin: 4px 0 0; font-size: 18px; font-weight: 700;">₦${invoiceAmount}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                    <p style="margin: 0; font-size: 12px; color: #64748b;">Amount Paid</p>
+                    <p style="margin: 4px 0 0; font-size: 18px; font-weight: 700;">₦${amountPaid}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                    <p style="margin: 0; font-size: 12px; color: #64748b;">Excess (To Be Refunded)</p>
+                    <p style="margin: 4px 0 0; font-size: 18px; font-weight: 700; color: #d97706;">₦${excessAmount}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 24px 32px;">
+              <p style="margin: 0 0 8px; font-size: 14px; color: #475569;">The excess amount of <strong>₦${excessAmount}</strong> will be refunded to your account within 3-5 business days.</p>
+              <p style="margin: 0; font-size: 12px; color: #94a3b8;">If you have any questions, please contact ${businessName} directly.</p>
             </td>
           </tr>
           <tr>

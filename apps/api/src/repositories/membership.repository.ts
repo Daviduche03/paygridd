@@ -13,7 +13,16 @@ export interface Membership {
 }
 
 export const membershipRepository = {
-  async findByBusiness(businessId: string): Promise<(Membership & { user: { id: string; fullName: string | null; email: string; avatarUrl: string | null } })[]> {
+  async findByBusiness(businessId: string): Promise<
+    (Membership & {
+      user: {
+        id: string;
+        fullName: string | null;
+        email: string;
+        avatarUrl: string | null;
+      };
+    })[]
+  > {
     const rows = await db
       .select({
         id: usersOnBusiness.id,
@@ -44,20 +53,29 @@ export const membershipRepository = {
     return rows as Membership[];
   },
 
-  async findOne(userId: string, businessId: string): Promise<Membership | null> {
+  async findOne(
+    userId: string,
+    businessId: string,
+  ): Promise<Membership | null> {
     const [row] = await db
       .select()
       .from(usersOnBusiness)
-      .where(and(eq(usersOnBusiness.userId, userId), eq(usersOnBusiness.businessId, businessId)));
+      .where(
+        and(
+          eq(usersOnBusiness.userId, userId),
+          eq(usersOnBusiness.businessId, businessId),
+        ),
+      );
 
     return (row as Membership) || null;
   },
 
-  async create(data: { userId: string; businessId: string; role: BusinessRole }): Promise<Membership> {
-    const [row] = await db
-      .insert(usersOnBusiness)
-      .values(data)
-      .returning();
+  async create(data: {
+    userId: string;
+    businessId: string;
+    role: BusinessRole;
+  }): Promise<Membership> {
+    const [row] = await db.insert(usersOnBusiness).values(data).returning();
 
     return row as Membership;
   },
@@ -76,10 +94,18 @@ export const membershipRepository = {
     await db.delete(usersOnBusiness).where(eq(usersOnBusiness.id, id));
   },
 
-  async removeByUserAndBusiness(userId: string, businessId: string): Promise<void> {
+  async removeByUserAndBusiness(
+    userId: string,
+    businessId: string,
+  ): Promise<void> {
     await db
       .delete(usersOnBusiness)
-      .where(and(eq(usersOnBusiness.userId, userId), eq(usersOnBusiness.businessId, businessId)));
+      .where(
+        and(
+          eq(usersOnBusiness.userId, userId),
+          eq(usersOnBusiness.businessId, businessId),
+        ),
+      );
   },
 
   async countByBusiness(businessId: string): Promise<number> {
