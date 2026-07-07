@@ -1,10 +1,15 @@
 export function getUrl() {
-  if (process.env.NEXT_PUBLIC_URL) {
-    return process.env.NEXT_PUBLIC_URL;
+  const configured = import.meta.env.VITE_APP_URL as string | undefined;
+  if (configured) {
+    return configured.replace(/\/$/, "");
   }
 
-  if (process.env.RAILWAY_PUBLIC_DOMAIN) {
-    return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
+  }
+
+  if (import.meta.env.PROD) {
+    return "https://app.paygrid.xyz";
   }
 
   return "http://localhost:3001";
