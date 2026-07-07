@@ -139,6 +139,37 @@ export const customerRepository = {
       return this.findById(params.businessId, updated.id);
     }
 
+    if (params.email) {
+      const [existing] = await db
+        .select()
+        .from(customers)
+        .where(
+          and(
+            eq(customers.businessId, params.businessId),
+            eq(customers.email, params.email),
+          ),
+        )
+        .limit(1);
+
+      if (existing) {
+        const [updated] = await db
+          .update(customers)
+          .set({
+            name: params.name,
+            phone: params.phone ?? null,
+            billingEmail: params.billingEmail ?? null,
+            country: params.country ?? null,
+            countryCode: params.countryCode ?? null,
+            updatedAt: new Date().toISOString(),
+          })
+          .where(eq(customers.id, existing.id))
+          .returning();
+
+        if (!updated) return null;
+        return this.findById(params.businessId, updated.id);
+      }
+    }
+
     const [created] = await db
       .insert(customers)
       .values({
