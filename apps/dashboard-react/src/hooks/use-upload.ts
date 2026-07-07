@@ -23,18 +23,26 @@ function buildApiUrl(path: string) {
   return base ? `${base}${path}` : path;
 }
 
+function buildDownloadUrl(filePath: string): string {
+  const encodedPath = filePath.split("/").map(encodeURIComponent).join("/");
+  return buildApiUrl(`/files/download/${encodedPath}`);
+}
+
 export function useUpload() {
   const [isLoading, setLoading] = useState<boolean>(false);
 
   const uploadFile = async ({
     file,
     path,
+    bucket,
   }: UploadParams): Promise<UploadResult> => {
     setLoading(true);
 
     try {
       const formData = new FormData();
       formData.append("file", file);
+      if (bucket) formData.append("bucket", bucket);
+      if (path.length > 0) formData.append("path", JSON.stringify(path));
 
       const token = getAuthToken();
       const res = await fetch(buildApiUrl("/files/upload"), {
@@ -50,12 +58,12 @@ export function useUpload() {
       }
 
       const json = await res.json();
-      const fileName = json.data?.path || file.name;
-      const url = buildApiUrl(`/files/download/${fileName}`);
+      const filePath = json.data?.path || file.name;
+      const url = json.data?.url || buildDownloadUrl(filePath);
 
       return {
         url,
-        path: [...path, fileName],
+        path: [...path, filePath],
       };
     } finally {
       setLoading(false);

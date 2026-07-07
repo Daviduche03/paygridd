@@ -1,7 +1,7 @@
 "use client";
 
 import type { RouterOutputs } from "api";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { useMemo, useState } from "react";
 import { Badge } from "ui/badge";
@@ -64,6 +64,15 @@ const RECON_STATUS_STYLES = {
 } as const;
 
 type SearchField = "reference" | "customer" | "account" | "sender";
+type SummaryData = {
+  totalCount: number;
+  successCount: number;
+  pendingReconciliationCount: number;
+  failedReversedCount: number;
+  volumeToday: number;
+  currency: string;
+};
+type ListData = { data: TransactionRow[]; meta: { cursor: string | null } };
 
 async function copyText(value: string) {
   await navigator.clipboard.writeText(value);
@@ -94,8 +103,6 @@ export default function TransactionsPage() {
   const [status, setStatus] = useState<string>("all");
   const [type, setType] = useState<string>("all");
   const [dateRange, setDateRange] = useState<string>("all");
-  const [amountRange, setAmountRange] = useState<string>("all");
-  const [customerId, setCustomerId] = useState<string>("all");
 
   const listInput = useMemo(
     () => ({
@@ -110,43 +117,33 @@ export default function TransactionsPage() {
         dateRange === "all"
           ? undefined
           : (dateRange as "today" | "7d" | "30d" | "90d"),
-      amountRange:
-        amountRange === "all"
-          ? undefined
-          : (amountRange as "0-1000" | "1000-10000" | "10000-100000" | "100000+"),
-      customerId: customerId === "all" ? undefined : customerId,
       pageSize: 50,
     }),
-    [q, searchField, status, type, dateRange, amountRange, customerId],
+    [q, searchField, status, type, dateRange],
   );
 
-  const { data: summary, isLoading: summaryLoading } = useStableQuery(
+  const { data: _summary, isLoading: summaryLoading } = useStableQuery(
     trpc.transactions.summary.queryOptions(),
   );
+  const summary = _summary as SummaryData | undefined;
 
-  const { data: listResult, isLoading: listLoading, isFetching } = useStableQuery(
+  const { data: _listResult, isLoading: listLoading, isFetching } = useStableQuery(
     trpc.transactions.list.queryOptions(listInput),
   );
-
-  const { data: customersData } = useQuery(
-    trpc.customers.get.queryOptions({ pageSize: 100 }),
-  );
+  const listResult = _listResult as ListData | undefined;
 
   const transactions = useMemo(() => {
     if (!listResult || Array.isArray(listResult)) return [] as TransactionRow[];
     return listResult.data ?? [];
   }, [listResult]);
 
-  const customers = customersData?.data ?? [];
   const currency = summary?.currency ?? "NGN";
   const isLoading = summaryLoading || listLoading;
   const hasFilters =
     q.trim().length > 0 ||
     status !== "all" ||
     type !== "all" ||
-    dateRange !== "all" ||
-    amountRange !== "all" ||
-    customerId !== "all";
+    dateRange !== "all";
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -255,9 +252,7 @@ export default function TransactionsPage() {
                     <TabsTrigger value="reference" className="text-xs px-3 py-1.5 data-[state=active]:bg-muted rounded-none">
                       Reference
                     </TabsTrigger>
-                    <TabsTrigger value="customer" className="text-xs px-3 py-1.5 data-[state=active]:bg-muted rounded-none">
-                      Customer
-                    </TabsTrigger>
+
                     <TabsTrigger value="account" className="text-xs px-3 py-1.5 data-[state=active]:bg-muted rounded-none">
                       Virtual Account
                     </TabsTrigger>
@@ -312,31 +307,7 @@ export default function TransactionsPage() {
                     <SelectItem value="90d">Last 90 Days</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={amountRange} onValueChange={setAmountRange}>
-                  <SelectTrigger className="w-[130px]">
-                    <SelectValue placeholder="Amount Range" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="0-1000">₦0 - ₦1,000</SelectItem>
-                    <SelectItem value="1000-10000">₦1,000 - ₦10,000</SelectItem>
-                    <SelectItem value="10000-100000">₦10,000 - ₦100,000</SelectItem>
-                    <SelectItem value="100000+">₦100,000+</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={customerId} onValueChange={setCustomerId}>
-                  <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="Customer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {customers.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
               </div>
             </div>
 
