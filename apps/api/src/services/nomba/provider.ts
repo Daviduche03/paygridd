@@ -145,16 +145,19 @@ export class NombaProvider {
 
   // ─── Transaction Methods ────────────────────────────────
 
-  async getParentAccountTransactions(params?: {
-    limit?: number;
-    cursor?: string;
-    dateFrom?: string;
-    dateTo?: string;
-  }): Promise<TransactionListResults> {
-    logger.info("getParentAccountTransactions");
+  async getTransactions(
+    subAccountId?: string,
+    params?: {
+      limit?: number;
+      cursor?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    },
+  ): Promise<TransactionListResults> {
+    logger.info("getTransactions", { subAccountId });
 
     try {
-      return await this.#api.getParentAccountTransactions(params);
+      return await this.#api.getTransactions(subAccountId, params);
     } catch (error) {
       const parsed = parseNombaError(error);
       if (parsed) throw new ProviderError(parsed);
@@ -162,7 +165,8 @@ export class NombaProvider {
     }
   }
 
-  async filterParentAccountTransactions(
+  async filterTransactions(
+    subAccountId: string | undefined,
     filterParams: FilterTransactionRequest,
     pagination?: {
       limit?: number;
@@ -171,10 +175,11 @@ export class NombaProvider {
       dateTo?: string;
     },
   ): Promise<TransactionListResults> {
-    logger.info("filterParentAccountTransactions");
+    logger.info("filterTransactions", { subAccountId });
 
     try {
-      return await this.#api.filterParentAccountTransactions(
+      return await this.#api.filterTransactions(
+        subAccountId,
         filterParams,
         pagination,
       );
@@ -185,16 +190,19 @@ export class NombaProvider {
     }
   }
 
-  async getSingleParentAccountTransaction(params: {
-    transactionRef?: string;
-    merchantTxRef?: string;
-    orderReference?: string;
-    orderId?: string;
-  }): Promise<ParentAccountTransactionResult> {
-    logger.info("getSingleParentAccountTransaction");
+  async getSingleTransaction(
+    subAccountId: string | undefined,
+    params: {
+      transactionRef?: string;
+      merchantTxRef?: string;
+      orderReference?: string;
+      orderId?: string;
+    },
+  ): Promise<ParentAccountTransactionResult> {
+    logger.info("getSingleTransaction", { subAccountId });
 
     try {
-      return await this.#api.getSingleParentAccountTransaction(params);
+      return await this.#api.getSingleTransaction(subAccountId, params);
     } catch (error) {
       const parsed = parseNombaError(error);
       if (parsed) throw new ProviderError(parsed);

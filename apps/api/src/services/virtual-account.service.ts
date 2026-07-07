@@ -85,12 +85,20 @@ async function createOnNomba(params: {
   expectedAmount?: number;
   expiryDate?: string;
 }) {
-  const nombaAccount = await nombaService.provider.createVirtualAccount({
-    accountRef: params.accountRef,
-    accountName: params.accountName,
-    expectedAmount: params.expectedAmount,
-    expiryDate: params.expiryDate,
-  });
+  const subAccountId = env.NOMBA_SUB_ACCOUNT_ID;
+  const nombaAccount = subAccountId
+    ? await nombaService.provider.createVirtualAccountForSubAccount(subAccountId, {
+        accountRef: params.accountRef,
+        accountName: params.accountName,
+        expectedAmount: params.expectedAmount,
+        expiryDate: params.expiryDate,
+      })
+    : await nombaService.provider.createVirtualAccount({
+        accountRef: params.accountRef,
+        accountName: params.accountName,
+        expectedAmount: params.expectedAmount,
+        expiryDate: params.expiryDate,
+      });
 
   return persistNombaAccount(params.businessId, nombaAccount, params);
 }

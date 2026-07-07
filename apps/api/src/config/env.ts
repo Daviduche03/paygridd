@@ -25,6 +25,7 @@ const envSchema = z.object({
   NOMBA_CLIENT_ID: z.string().optional().default(""),
   NOMBA_CLIENT_SECRET: z.string().optional().default(""),
   NOMBA_ACCOUNT_ID: z.string().optional().default(""),
+  NOMBA_SUB_ACCOUNT_ID: z.string().optional().default(""),
   NOMBA_SANDBOX: z.string().optional().default("true"),
   NOMBA_WEBHOOK_SECRET: z.string().optional().default(""),
 

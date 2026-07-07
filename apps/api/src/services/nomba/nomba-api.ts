@@ -234,15 +234,21 @@ export class NombaApi {
     return response.data;
   }
 
-  async transferToBank(params: BankTransferRequest): Promise<{
+  async transferToBank(
+    params: BankTransferRequest,
+    subAccountId?: string,
+  ): Promise<{
     code: string;
     description: string;
     data: BankTransferResponse;
   }> {
     const token = await this.#getAccessToken();
+    const path = subAccountId
+      ? `/v2/transfers/bank/${subAccountId}`
+      : "/v1/transfers/bank";
     const response = await this.#request<
       NombaApiResponse<BankTransferResponse>
-    >("/v1/transfers/bank", { method: "POST", token, body: params });
+    >(path, { method: "POST", token, body: params });
 
     if (response.code !== "00" && response.code !== "01") {
       throw new Error(response.description || "Bank transfer failed");
@@ -255,21 +261,27 @@ export class NombaApi {
     };
   }
 
-  async getParentAccountTransactions(params?: {
-    limit?: number;
-    cursor?: string;
-    dateFrom?: string;
-    dateTo?: string;
-  }): Promise<TransactionListResults> {
+  async getTransactions(
+    subAccountId?: string,
+    params?: {
+      limit?: number;
+      cursor?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    },
+  ): Promise<TransactionListResults> {
     const token = await this.#getAccessToken();
-    const query = this.#paginationQuery(params);
+    const path = subAccountId
+      ? `/v1/transactions/accounts/${subAccountId}`
+      : "/v1/transactions/accounts";
     const response = await this.#request<
       NombaApiResponse<TransactionListResults>
-    >("/v1/transactions/accounts", { method: "GET", token, query });
+    >(path, { method: "GET", token, query: this.#paginationQuery(params) });
     return response.data;
   }
 
-  async filterParentAccountTransactions(
+  async filterTransactions(
+    subAccountId: string | undefined,
     filterParams: FilterTransactionRequest,
     pagination?: {
       limit?: number;
@@ -279,9 +291,12 @@ export class NombaApi {
     },
   ): Promise<TransactionListResults> {
     const token = await this.#getAccessToken();
+    const path = subAccountId
+      ? `/v1/transactions/accounts/${subAccountId}`
+      : "/v1/transactions/accounts";
     const response = await this.#request<
       NombaApiResponse<TransactionListResults>
-    >("/v1/transactions/accounts", {
+    >(path, {
       method: "POST",
       token,
       query: this.#paginationQuery(pagination),
@@ -290,12 +305,15 @@ export class NombaApi {
     return response.data;
   }
 
-  async getSingleParentAccountTransaction(params: {
-    transactionRef?: string;
-    merchantTxRef?: string;
-    orderReference?: string;
-    orderId?: string;
-  }): Promise<ParentAccountTransactionResult> {
+  async getSingleTransaction(
+    subAccountId: string | undefined,
+    params: {
+      transactionRef?: string;
+      merchantTxRef?: string;
+      orderReference?: string;
+      orderId?: string;
+    },
+  ): Promise<ParentAccountTransactionResult> {
     const token = await this.#getAccessToken();
     const query: Record<string, string> = {};
     if (params.transactionRef) query.transactionRef = params.transactionRef;
@@ -303,9 +321,12 @@ export class NombaApi {
     if (params.orderReference) query.orderReference = params.orderReference;
     if (params.orderId) query.orderId = params.orderId;
 
+    const path = subAccountId
+      ? `/v1/transactions/accounts/${subAccountId}/single`
+      : "/v1/transactions/accounts/single";
     const response = await this.#request<
       NombaApiResponse<ParentAccountTransactionResult>
-    >("/v1/transactions/accounts/single", { method: "GET", token, query });
+    >(path, { method: "GET", token, query });
     return response.data;
   }
 
