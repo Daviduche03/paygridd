@@ -79,7 +79,9 @@ export default function PayoutsSettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Payout Balance</CardTitle>
-              <CardDescription>Available funds from collected payments after platform fees</CardDescription>
+              <CardDescription>
+                Available funds after platform fees (net of charges on incoming payments)
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {balanceLoading ? (
@@ -91,7 +93,7 @@ export default function PayoutsSettingsPage() {
                 <div className="space-y-1">
                   <p className="text-3xl font-bold">{formatCurrency(balance.available)}</p>
                   <p className="text-sm text-muted-foreground">
-                    Total collected: {formatCurrency(balance.totalCollected)} &middot; Total paid out: {formatCurrency(balance.totalPaidOut)}
+                    Net collected: {formatCurrency(balance.totalCollected)} &middot; Total paid out: {formatCurrency(balance.totalPaidOut)}
                   </p>
                 </div>
               ) : null}

@@ -5,12 +5,13 @@ import { env } from "@/config/env";
 import { transactions } from "@/db/schema";
 import { NombaApi } from "@/services/nomba/nomba-api";
 import type { BankTransferRequest } from "@/services/nomba/types";
+import { effectiveNetAmountSql } from "@/utils/transaction-amount";
 
 export const payoutService = {
   async getAvailableBalance(businessId: string) {
     const [row] = await db
       .select({
-        totalCredits: sql<string>`coalesce(sum(${transactions.netAmount}::numeric) filter (where ${transactions.type} = 'credit' and ${transactions.status} = 'posted'), 0)`,
+        totalCredits: sql<string>`coalesce(sum(${effectiveNetAmountSql}) filter (where ${transactions.type} = 'credit' and ${transactions.status} = 'posted'), 0)`,
         totalDebits: sql<string>`coalesce(sum(${transactions.amount}::numeric) filter (where ${transactions.type} = 'debit'), 0)`,
         currency: sql<string>`coalesce(max(${transactions.currency}), 'NGN')`,
       })

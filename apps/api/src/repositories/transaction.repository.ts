@@ -6,6 +6,7 @@ import {
   transactions,
   virtualAccounts,
 } from "@/db/schema";
+import { effectiveNetAmountSql } from "@/utils/transaction-amount";
 
 type TransactionStatus = "posted" | "pending" | "failed" | "reversed";
 type ReconciliationStatus =
@@ -275,7 +276,7 @@ export const transactionRepository = {
   async getBusinessBalance(businessId: string) {
     const [row] = await db
       .select({
-        totalBalance: sql<number>`coalesce(sum(case when ${transactions.type} = 'credit' and ${transactions.status} = 'posted' then ${transactions.amount}::numeric when ${transactions.type} = 'debit' and ${transactions.status} = 'posted' then -${transactions.amount}::numeric else 0 end), 0)::float`,
+        totalBalance: sql<number>`coalesce(sum(case when ${transactions.type} = 'credit' and ${transactions.status} = 'posted' then ${effectiveNetAmountSql} when ${transactions.type} = 'debit' and ${transactions.status} = 'posted' then -${transactions.amount}::numeric else 0 end), 0)::float`,
         currency: sql<string>`coalesce(max(${transactions.currency}), 'NGN')`,
       })
       .from(transactions)

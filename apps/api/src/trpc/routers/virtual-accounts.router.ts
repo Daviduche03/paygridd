@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { customerRepository } from "@/repositories/customer.repository";
 import { transactionRepository } from "@/repositories/transaction.repository";
 import { virtualAccountRepository } from "@/repositories/virtual-account.repository";
 import { virtualAccountService } from "@/services/virtual-account.service";
@@ -98,11 +99,22 @@ export const virtualAccountsRouter = t.router({
       const accountRef =
         input.accountRef?.trim() || `pg-${crypto.randomUUID()}`;
 
+      let customerName = input.accountName;
+      if (input.customerId) {
+        const customer = await customerRepository.findById(
+          businessId,
+          input.customerId,
+        );
+        if (customer?.name) {
+          customerName = customer.name;
+        }
+      }
+
       const created = input.customerId
         ? await virtualAccountService.createStaticForCustomer({
             businessId,
             customerId: input.customerId,
-            customerName: input.accountName,
+            customerName,
           })
         : await virtualAccountService.create({
             businessId,

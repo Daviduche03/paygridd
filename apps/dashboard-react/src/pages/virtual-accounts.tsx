@@ -177,7 +177,13 @@ function ProvisionSheet({ open, onOpenChange, onCreated }: ProvisionSheetProps) 
                 <label className="text-sm font-medium">Customer</label>
                 <Select
                   value={customerId || undefined}
-                  onValueChange={setCustomerId}
+                  onValueChange={(value) => {
+                    setCustomerId(value);
+                    const customer = customers.find((c) => c.id === value);
+                    if (customer?.name) {
+                      setAccountName(customer.name);
+                    }
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a customer (optional)" />

@@ -1,6 +1,10 @@
 import { and, desc, eq, ilike, lt, or, sql } from "drizzle-orm";
 import { db } from "@/config/db";
 import { customers, transactions, virtualAccounts } from "@/db/schema";
+import {
+  effectiveNetAmountSql,
+  effectiveNetAmountSubquerySql,
+} from "@/utils/transaction-amount";
 
 type VirtualAccountStatus = "active" | "suspended" | "closed" | "expired";
 type VirtualAccountKind = "static" | "dynamic";
@@ -28,7 +32,7 @@ type CreateVirtualAccountParams = {
 };
 
 const totalReceivedSql = sql<number>`coalesce((
-  select sum(t.amount::numeric)
+  select sum(${effectiveNetAmountSubquerySql})
   from transactions t
   where t.virtual_account_id = ${virtualAccounts.id}
     and t.status = 'posted'
@@ -72,7 +76,7 @@ export const virtualAccountRepository = {
 
     const [inflow] = await db
       .select({
-        total: sql<number>`coalesce(sum(${transactions.amount}::numeric), 0)::float`,
+        total: sql<number>`coalesce(sum(${effectiveNetAmountSql}), 0)::float`,
       })
       .from(transactions)
       .where(
@@ -193,7 +197,7 @@ export const virtualAccountRepository = {
             and t.status = 'posted'
         ), 0)`,
         lastPaymentAmount: sql<number | null>`(
-          select t.amount::float
+          select (${effectiveNetAmountSubquerySql})::float
           from transactions t
           where t.virtual_account_id = ${virtualAccounts.id}
             and t.status = 'posted'

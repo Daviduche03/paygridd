@@ -9,7 +9,7 @@ type PersistParams = {
   customerId?: string | null;
   kind: VirtualAccountKind;
   accountRef: string;
-  accountName: string;
+  displayAccountName: string;
   expectedAmount?: number;
 };
 
@@ -34,6 +34,10 @@ function resolveDynamicExpiryDate(dueDate?: string | null) {
   return formatNombaExpiryDate(base);
 }
 
+function sanitizeAccountName(name: string) {
+  return name.replace(/[^a-zA-Z ]/g, "").trim();
+}
+
 async function persistNombaAccount(
   businessId: string,
   nombaAccount: VirtualAccountObject,
@@ -47,13 +51,14 @@ async function persistNombaAccount(
 
   const expectedAmount =
     params.expectedAmount != null ? String(params.expectedAmount) : null;
+  const accountName = params.displayAccountName || nombaAccount.accountName;
 
   if (existing) {
     return virtualAccountRepository.updateRecord(existing.id, {
       customerId: params.customerId ?? null,
       kind: params.kind,
       accountRef: nombaAccount.accountRef,
-      accountName: nombaAccount.accountName,
+      accountName,
       bankName: nombaAccount.bankName,
       nombaAccountHolderId: nombaAccount.accountHolderId,
       expectedAmount,
@@ -67,7 +72,7 @@ async function persistNombaAccount(
     customerId: params.customerId ?? null,
     kind: params.kind,
     accountRef: nombaAccount.accountRef,
-    accountName: nombaAccount.accountName,
+    accountName,
     accountNumber: nombaAccount.bankAccountNumber,
     bankName: nombaAccount.bankName,
     currency: nombaAccount.currency,
@@ -85,22 +90,29 @@ async function createOnNomba(params: {
   expectedAmount?: number;
   expiryDate?: string;
 }) {
+  const displayAccountName = sanitizeAccountName(params.accountName);
   const subAccountId = env.NOMBA_SUB_ACCOUNT_ID;
   const nombaAccount = subAccountId
     ? await nombaService.provider.createVirtualAccountForSubAccount(subAccountId, {
         accountRef: params.accountRef,
-        accountName: params.accountName,
+        accountName: displayAccountName,
         expectedAmount: params.expectedAmount,
         expiryDate: params.expiryDate,
       })
     : await nombaService.provider.createVirtualAccount({
         accountRef: params.accountRef,
-        accountName: params.accountName,
+        accountName: displayAccountName,
         expectedAmount: params.expectedAmount,
         expiryDate: params.expiryDate,
       });
 
-  return persistNombaAccount(params.businessId, nombaAccount, params);
+  return persistNombaAccount(params.businessId, nombaAccount, {
+    customerId: params.customerId ?? null,
+    kind: params.kind,
+    accountRef: params.accountRef,
+    displayAccountName,
+    expectedAmount: params.expectedAmount,
+  });
 }
 
 export const virtualAccountService = {
@@ -132,7 +144,7 @@ export const virtualAccountService = {
       customerId: params.customerId,
       kind: "static",
       accountRef,
-      accountName: params.customerName.replace(/[^a-zA-Z ]/g, ""),
+      accountName: params.customerName,
     });
   },
 
@@ -155,12 +167,10 @@ export const virtualAccountService = {
       return existing;
     }
 
-    const rawName = `${params.customerName} ${params.invoiceNumber}`
-      .replace(/[^a-zA-Z ]/g, "")
-      .trim();
+    const rawName = `${params.customerName} ${params.invoiceNumber}`.trim();
     const accountName =
-      rawName ||
-      params.customerName.replace(/[^a-zA-Z ]/g, "").trim() ||
+      sanitizeAccountName(rawName) ||
+      sanitizeAccountName(params.customerName) ||
       "Invoice Payment";
     const expectedAmount = params.amount > 0 ? params.amount : undefined;
     const expiryDate = isSandbox()
