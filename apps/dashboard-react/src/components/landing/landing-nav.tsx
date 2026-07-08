@@ -1,9 +1,12 @@
 import { Link } from "react-router-dom";
 import { Button } from "ui/button";
+import { LB } from "./landing-border";
 
 export function LandingNav() {
   return (
-    <header className="fixed top-0 inset-x-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
+    <header
+      className={`fixed top-0 inset-x-0 z-50 border-b ${LB.section} bg-background/80 backdrop-blur-xl`}
+    >
       <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
         <Link to="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
           <img src="/images/logo.png" alt="PayGrid" className="h-8 w-auto" />

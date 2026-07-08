@@ -1,22 +1,25 @@
 import { Link } from "react-router-dom";
+import { LB } from "./landing-border";
 
 export function LandingFooter() {
   return (
-    <footer className="border-t border-border py-10">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 sm:flex-row">
-        <div className="flex items-center gap-2">
-          <img src="/images/logo.png" alt="PayGrid" className="h-6 w-auto opacity-80" />
-          <span className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} PayGrid
+    <footer className={`border-t ${LB.section}`}>
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3">
+          <img src="/images/logo.png" alt="PayGrid" className="h-5 w-auto opacity-70" />
+          <span className="font-mono text-[11px] text-muted-foreground">
+            payments for nigerian teams
           </span>
         </div>
-        <div className="flex items-center gap-6 text-xs text-muted-foreground">
+
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[11px] text-muted-foreground">
           <a href="/docs" className="transition-colors hover:text-foreground">
-            Documentation
+            docs
           </a>
           <Link to="/login" className="transition-colors hover:text-foreground">
-            Sign in
+            sign in
           </Link>
+          <span>© {new Date().getFullYear()}</span>
         </div>
       </div>
     </footer>

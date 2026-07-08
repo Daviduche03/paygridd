@@ -11,7 +11,7 @@ import {
 import { useEffect, useState } from "react";
 
 const icons = {
-  "/": () => <Icons.Overview size={20} />,
+  "/overview": () => <Icons.Overview size={20} />,
   "/customers": () => <Icons.Customers size={20} />,
   "/virtual-accounts": () => <Building2 size={20} />,
   "/transactions": () => <Icons.Transactions size={20} />,
@@ -94,7 +94,7 @@ export function MainMenu({ onSelect, isExpanded = false }: Props) {
         <div className="flex flex-col gap-2">
           {items.map((item) => {
             const isActive =
-              (pathname === "/" && item.path === "/") ||
+              (pathname === "/" && item.path === "/overview") ||
               (pathname !== "/" && item.path.startsWith(`/${part}`));
 
             return (
