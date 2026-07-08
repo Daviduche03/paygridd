@@ -4,8 +4,8 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import cors from "cors";
 import express from "express";
 import rateLimit from "express-rate-limit";
-import helmet from "helmet";
 import { env } from "@/config/env";
+import { applySecurityMiddleware } from "@/config/security";
 import { errorHandler } from "@/middleware/error.middleware";
 import { apiV1Routes } from "@/routes/api-v1.routes";
 import { authRoutes } from "@/routes/auth.routes";
@@ -26,8 +26,7 @@ export function createApp() {
     logger.info(`Serving frontend from ${frontendDist}`);
   }
 
-  // Security headers
-  app.use(helmet());
+  applySecurityMiddleware(app);
 
   // Rate limiting
   const apiLimiter = rateLimit({
