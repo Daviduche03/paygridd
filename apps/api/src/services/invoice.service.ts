@@ -10,6 +10,7 @@ import { NombaApi } from "@/services/nomba/nomba-api";
 import type { VirtualAccountTransactionResult } from "@/services/nomba/types";
 import { reconciliationService } from "@/services/reconciliation.service";
 import { virtualAccountService } from "@/services/virtual-account.service";
+import { userRepository } from "@/repositories/user.repository";
 import { getBusinessIdForUser } from "@/utils/business";
 import { calculatePlatformFee } from "@/utils/platform-fee";
 
@@ -351,6 +352,21 @@ function buildTextDoc(lines: string[]) {
   };
 }
 
+async function buildDefaultFromDetails(businessId: string, userId: string) {
+  const [business, user] = await Promise.all([
+    businessRepository.findById(businessId),
+    userRepository.findById(userId),
+  ]);
+
+  const lines = [
+    business?.name,
+    user?.email,
+    business?.countryCode,
+  ].filter((line): line is string => Boolean(line));
+
+  return lines.length > 0 ? buildTextDoc(lines) : null;
+}
+
 async function ensureVirtualAccountForInvoice(
   businessId: string,
   invoice: {
@@ -654,7 +670,18 @@ export const invoiceService = {
     if (!row) return null;
 
     const payments = await invoiceRepository.listPayments(businessId, id);
-    return mapDetailRow(row, payments);
+    const mapped = mapDetailRow(row, payments);
+    const fromDetails =
+      mapped.fromDetails ?? (await buildDefaultFromDetails(businessId, userId));
+
+    return {
+      ...mapped,
+      fromDetails,
+      template: {
+        ...mapped.template,
+        fromLabel: "Me",
+      },
+    };
   },
 
   async defaultSettings(userId: string) {
@@ -666,6 +693,7 @@ export const invoiceService = {
     const now = new Date();
     const due = new Date(now);
     due.setMonth(due.getMonth() + 1);
+    const fromDetails = await buildDefaultFromDetails(businessId, userId);
 
     return {
       id,
@@ -679,7 +707,7 @@ export const invoiceService = {
       template: {
         currency: "NGN",
         customerLabel: "Bill to",
-        fromLabel: "From",
+        fromLabel: "Me",
         invoiceNoLabel: "Invoice number",
         issueDateLabel: "Issue date",
         dueDateLabel: "Due date",
@@ -693,7 +721,7 @@ export const invoiceService = {
         dateFormat: "dd/MM/yyyy" as const,
         deliveryType: "create" as const,
       },
-      fromDetails: null,
+      fromDetails,
       customerDetails: null,
       paymentDetails: null,
       noteDetails: null,

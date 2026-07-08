@@ -32,7 +32,6 @@ import { LineItems } from "./line-items";
 import { Logo } from "./logo";
 import { Meta } from "./meta";
 import { NoteDetails } from "./note-details";
-import { PaymentDetails } from "./payment-details";
 import { SettingsMenu } from "./settings-menu";
 import { SubmitButton } from "./submit-button";
 import { Summary } from "./summary";
@@ -134,7 +133,6 @@ export function Form() {
       "dueDate",
       "issueDate",
       "noteDetails",
-      "paymentDetails",
       "fromDetails",
       "invoiceNumber",
       "topBlock",
@@ -239,8 +237,7 @@ export function Form() {
           </div>
 
           <div className="flex flex-col mt-auto">
-            <div className="grid grid-cols-2 gap-6 mb-4 overflow-hidden">
-              <PaymentDetails />
+            <div className="mb-4 overflow-hidden">
               <NoteDetails />
             </div>
 

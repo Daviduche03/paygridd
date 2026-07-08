@@ -12,6 +12,48 @@ interface CustomerData {
   vatNumber?: string | null;
 }
 
+interface BusinessData {
+  name?: string | null;
+  countryCode?: string | null;
+}
+
+interface UserData {
+  email?: string | null;
+  fullName?: string | null;
+}
+
+export const transformBusinessToContent = (
+  business?: BusinessData | null,
+  user?: UserData | null,
+) => {
+  if (!business?.name && !user?.email && !user?.fullName) return null;
+
+  const content = [];
+
+  if (business?.name) {
+    content.push({
+      type: "paragraph",
+      content: [{ text: business.name, type: "text" }],
+    });
+  }
+
+  if (user?.email) {
+    content.push({
+      type: "paragraph",
+      content: [{ text: user.email, type: "text" }],
+    });
+  }
+
+  if (business?.countryCode) {
+    content.push({
+      type: "paragraph",
+      content: [{ text: business.countryCode, type: "text" }],
+    });
+  }
+
+  return content.length > 0 ? { type: "doc", content } : null;
+};
+
 export const transformCustomerToContent = (customer?: CustomerData | null) => {
   if (!customer) return null;
 
