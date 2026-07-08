@@ -218,8 +218,13 @@ export default function DeveloperPage() {
         <div className="space-y-12">
           {/* API Keys */}
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-medium">API Keys</h3>
+            <div className="flex items-start justify-between mb-1">
+              <div>
+                <h3 className="text-base font-medium">API Keys</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  API keys allow external services to authenticate requests to the PayGrid API.
+                </p>
+              </div>
               <Button size="sm" onClick={() => { setNewKeyName(""); setNewKeyScopes([]); setRawKey(null); setCreateKeyOpen(true); }}>
                 Create API Key
               </Button>
@@ -308,8 +313,13 @@ export default function DeveloperPage() {
 
           {/* Webhooks */}
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-medium">Webhooks</h3>
+            <div className="flex items-start justify-between mb-1">
+              <div>
+                <h3 className="text-base font-medium">Webhooks</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Webhooks notify your server when events happen in your account.
+                </p>
+              </div>
               <Button size="sm" onClick={() => { setNewWhUrl(""); setNewWhDesc(""); setNewWhEvents([]); setCreateWhOpen(true); }}>
                 Add Endpoint
               </Button>
