@@ -276,7 +276,7 @@ export const transactionRepository = {
   async getBusinessBalance(businessId: string) {
     const [row] = await db
       .select({
-        totalBalance: sql<number>`coalesce(sum(case when ${transactions.type} = 'credit' and ${transactions.status} = 'posted' then ${effectiveNetAmountSql} when ${transactions.type} = 'debit' and ${transactions.status} = 'posted' then -${transactions.amount}::numeric else 0 end), 0)::float`,
+        totalBalance: sql<number>`coalesce(sum(case when ${transactions.type} = 'credit' and ${transactions.status} = 'posted' then ${effectiveNetAmountSql} when ${transactions.type} = 'debit' and ${transactions.status} in ('posted', 'pending') then -${transactions.amount}::numeric else 0 end), 0)::float`,
         currency: sql<string>`coalesce(max(${transactions.currency}), 'NGN')`,
       })
       .from(transactions)
@@ -304,6 +304,98 @@ export const transactionRepository = {
       .limit(1);
 
     return row ?? null;
+  },
+
+  async findByNombaReference(reference: string) {
+    const [row] = await db
+      .select({
+        id: transactions.id,
+        businessId: transactions.businessId,
+        type: transactions.type,
+        status: transactions.status,
+      })
+      .from(transactions)
+      .where(
+        or(
+          eq(transactions.nombaTransactionId, reference),
+          eq(transactions.nombaRequestId, reference),
+        ),
+      )
+      .limit(1);
+
+    return row ?? null;
+  },
+
+  async updatePayoutByMerchantRef(
+    businessId: string,
+    merchantTxRef: string,
+    data: {
+      status: TransactionStatus;
+      nombaRequestId?: string | null;
+      senderName?: string | null;
+      senderBank?: string | null;
+      narration?: string | null;
+      eventType?: string | null;
+    },
+  ) {
+    const [updated] = await db
+      .update(transactions)
+      .set({
+        status: data.status,
+        ...(data.nombaRequestId !== undefined
+          ? { nombaRequestId: data.nombaRequestId }
+          : {}),
+        ...(data.senderName !== undefined ? { senderName: data.senderName } : {}),
+        ...(data.senderBank !== undefined ? { senderBank: data.senderBank } : {}),
+        ...(data.narration !== undefined ? { narration: data.narration } : {}),
+        ...(data.eventType !== undefined ? { eventType: data.eventType } : {}),
+      })
+      .where(
+        and(
+          eq(transactions.businessId, businessId),
+          eq(transactions.nombaTransactionId, merchantTxRef),
+          eq(transactions.type, "debit"),
+        ),
+      )
+      .returning({ id: transactions.id });
+
+    return updated ?? null;
+  },
+
+  async updatePayoutById(
+    businessId: string,
+    transactionId: string,
+    data: {
+      status: TransactionStatus;
+      nombaRequestId?: string | null;
+      senderName?: string | null;
+      senderBank?: string | null;
+      narration?: string | null;
+      eventType?: string | null;
+    },
+  ) {
+    const [updated] = await db
+      .update(transactions)
+      .set({
+        status: data.status,
+        ...(data.nombaRequestId !== undefined
+          ? { nombaRequestId: data.nombaRequestId }
+          : {}),
+        ...(data.senderName !== undefined ? { senderName: data.senderName } : {}),
+        ...(data.senderBank !== undefined ? { senderBank: data.senderBank } : {}),
+        ...(data.narration !== undefined ? { narration: data.narration } : {}),
+        ...(data.eventType !== undefined ? { eventType: data.eventType } : {}),
+      })
+      .where(
+        and(
+          eq(transactions.businessId, businessId),
+          eq(transactions.id, transactionId),
+          eq(transactions.type, "debit"),
+        ),
+      )
+      .returning({ id: transactions.id });
+
+    return updated ?? null;
   },
 
   async listByVirtualAccount({

@@ -165,10 +165,6 @@ export class NombaApi {
       NombaApiResponse<BankTransferResponse>
     >(path, { method: "POST", token, body: params });
 
-    if (response.code !== "00" && response.code !== "01") {
-      throw new Error(response.description || "Bank transfer failed");
-    }
-
     return {
       code: response.code,
       description: response.description,

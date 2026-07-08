@@ -99,7 +99,56 @@ function resolveOccurredAt(time?: string) {
   return new Date().toISOString();
 }
 
+async function persistPayoutToDatabase(payload: NombaWebhookPayload) {
+  const transaction = payload.data?.transaction;
+  if (!transaction) return null;
+
+  const references = [
+    transaction.merchantTxRef,
+    transaction.transactionId,
+  ].filter(Boolean) as string[];
+
+  let existing = null;
+  for (const reference of references) {
+    const row = await transactionRepository.findByNombaReference(reference);
+    if (row?.type === "debit") {
+      existing = row;
+      break;
+    }
+  }
+
+  if (!existing) return null;
+
+  const status =
+    payload.event_type === "payout_success"
+      ? "posted"
+      : payload.event_type === "payout_failed"
+        ? "failed"
+        : payload.event_type === "payout_refund"
+          ? "reversed"
+          : existing.status;
+
+  const updated = await transactionRepository.updatePayoutById(
+    existing.businessId,
+    existing.id,
+    {
+      status,
+      eventType: payload.event_type,
+      nombaRequestId: transaction.transactionId ?? undefined,
+      narration: transaction.narration ?? undefined,
+    },
+  );
+
+  if (!updated) return null;
+
+  return { businessId: existing.businessId, transactionId: existing.id };
+}
+
 async function persistToDatabase(payload: NombaWebhookPayload) {
+  if (payload.event_type.startsWith("payout_")) {
+    return persistPayoutToDatabase(payload);
+  }
+
   const transaction = payload.data?.transaction;
   const customer = payload.data?.customer;
   if (!transaction) return null;
