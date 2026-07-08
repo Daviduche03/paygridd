@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/config/db";
-import { env } from "@/config/env";
 import { transactions } from "@/db/schema";
 import { NombaApi } from "@/services/nomba/nomba-api";
 import type { BankTransferRequest } from "@/services/nomba/types";
@@ -41,13 +40,10 @@ export const payoutService = {
     }
 
     const nomba = new NombaApi();
-    const result = await nomba.transferToBank(
-      {
-        ...params,
-        merchantTxRef: params.merchantTxRef ?? randomUUID(),
-      },
-      env.NOMBA_SUB_ACCOUNT_ID || undefined,
-    );
+    const result = await nomba.transferToBank({
+      ...params,
+      merchantTxRef: params.merchantTxRef ?? randomUUID(),
+    });
 
     await db.insert(transactions).values({
       businessId,
