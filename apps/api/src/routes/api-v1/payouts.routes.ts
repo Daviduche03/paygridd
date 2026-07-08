@@ -49,15 +49,16 @@ payoutsRoutes.post(
       narration,
     });
 
+    const txRef = result.data?.transactionRef ?? result.description ?? "pending";
     await db.insert(transactions).values({
       businessId,
-      nombaTransactionId: result.data.transactionRef,
+      nombaTransactionId: txRef,
       type: "debit",
       amount: amount.toString(),
-      status: result.code === "00" ? "posted" : "pending",
-      senderName: result.data.accountName,
-      senderBank: result.data.bankName,
-      narration: result.data.narration,
+      status: "posted",
+      senderName: result.data?.accountName ?? null,
+      senderBank: result.data?.bankName ?? null,
+      narration: result.data?.narration ?? narration ?? null,
       occurredAt: new Date().toISOString(),
     });
 

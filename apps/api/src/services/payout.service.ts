@@ -11,7 +11,7 @@ export const payoutService = {
     const [row] = await db
       .select({
         totalCredits: sql<string>`coalesce(sum(${effectiveNetAmountSql}) filter (where ${transactions.type} = 'credit' and ${transactions.status} = 'posted'), 0)`,
-        totalDebits: sql<string>`coalesce(sum(${transactions.amount}::numeric) filter (where ${transactions.type} = 'debit'), 0)`,
+        totalDebits: sql<string>`coalesce(sum(${transactions.amount}::numeric) filter (where ${transactions.type} = 'debit' and ${transactions.status} = 'posted'), 0)`,
         currency: sql<string>`coalesce(max(${transactions.currency}), 'NGN')`,
       })
       .from(transactions)
@@ -45,16 +45,17 @@ export const payoutService = {
       merchantTxRef: params.merchantTxRef ?? randomUUID(),
     });
 
+    const txRef = result.data?.transactionRef ?? result.description ?? "pending";
     await db.insert(transactions).values({
       businessId,
-      nombaTransactionId: result.data.transactionRef,
+      nombaTransactionId: txRef,
       type: "debit",
       amount: amount.toString(),
       netAmount: "0",
-      status: result.code === "00" ? "posted" : "pending",
-      senderName: result.data.accountName,
-      senderBank: result.data.bankName,
-      narration: result.data.narration,
+      status: "posted",
+      senderName: result.data?.accountName ?? null,
+      senderBank: result.data?.bankName ?? null,
+      narration: result.data?.narration ?? params.narration ?? null,
       occurredAt: new Date().toISOString(),
     });
 

@@ -155,7 +155,7 @@ export class NombaApi {
   ): Promise<{
     code: string;
     description: string;
-    data: BankTransferResponse;
+    data: BankTransferResponse | null;
   }> {
     const token = await this.#getAccessToken();
     const path = subAccountId
@@ -172,7 +172,7 @@ export class NombaApi {
     return {
       code: response.code,
       description: response.description,
-      data: response.data,
+      data: response.data ?? null,
     };
   }
 
