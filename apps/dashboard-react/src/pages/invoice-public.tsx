@@ -17,6 +17,13 @@ export default function InvoicePublicPage() {
   const { data: invoice, isLoading } = useQuery({
     ...trpc.invoice.getInvoiceByToken.queryOptions({ token: token ?? "" }),
     enabled: Boolean(token),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (!status || status === "paid" || status === "canceled" || status === "refunded") {
+        return false;
+      }
+      return 5000;
+    },
   });
 
   if (isLoading) {

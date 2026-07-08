@@ -4,7 +4,7 @@ import { cn } from "ui/cn";
 import { useMediaQuery } from "ui/hooks";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PaymentSuccessCelebration } from "./invoice/payment-success-celebration";
 import CustomerHeader from "./customer-header";
 import InvoiceToolbar from "./invoice-toolbar";
@@ -57,14 +57,17 @@ export function InvoiceViewWrapper({
   const [internalPaymentOpen, setInternalPaymentOpen] = useState(false);
   const [windowWidth, setWindowWidth] = useState(0);
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  const wasPaidOnLoad = useRef(initialStatus === "paid");
+  const paidOnInitialMount = useRef(initialStatus === "paid");
+  const celebrationShown = useRef(false);
+  const numericAmount =
+    typeof amount === "number" ? amount : Number(amount ?? 0) || 0;
+
   const canPollPayment =
     paymentEnabled &&
     status !== "paid" &&
     status !== "canceled" &&
     status !== "refunded" &&
-    typeof amount === "number" &&
-    amount > 0;
+    numericAmount > 0;
 
   const { data: liveInvoice } = useQuery({
     ...trpc.invoice.getInvoiceByToken.queryOptions({ token }),
@@ -72,10 +75,23 @@ export function InvoiceViewWrapper({
     refetchInterval: canPollPayment ? 5000 : false,
   });
 
+  const triggerCelebration = useCallback(() => {
+    if (paidOnInitialMount.current || celebrationShown.current) return;
+    celebrationShown.current = true;
+    setShowPaymentCelebration(true);
+  }, []);
+
+  const markPaymentSuccessful = useCallback(() => {
+    setStatus("paid");
+    triggerCelebration();
+  }, [triggerCelebration]);
+
   useEffect(() => {
     setStatus(initialStatus);
-    wasPaidOnLoad.current = initialStatus === "paid";
-  }, [initialStatus]);
+    if (initialStatus === "paid") {
+      triggerCelebration();
+    }
+  }, [initialStatus, triggerCelebration]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -89,24 +105,15 @@ export function InvoiceViewWrapper({
   const paymentOpen = isPaymentOpen ?? internalPaymentOpen;
   const handlePaymentOpenChange = onPaymentOpenChange ?? setInternalPaymentOpen;
 
-  // Sheet width is 520px, invoice width varies (595px for A4, 750px for Letter)
-  // Add some padding (40px) for margins
   const sheetWidth = 520;
   const minWidthNeeded = invoiceWidth + sheetWidth + 40;
   const useOverlay = windowWidth > 0 && windowWidth < minWidthNeeded;
-
-  const markPaymentSuccessful = () => {
-    setStatus("paid");
-    if (!wasPaidOnLoad.current) {
-      setShowPaymentCelebration(true);
-    }
-  };
 
   useEffect(() => {
     if (liveInvoice?.status === "paid" && status !== "paid") {
       markPaymentSuccessful();
     }
-  }, [liveInvoice?.status, status]);
+  }, [liveInvoice?.status, markPaymentSuccessful, status]);
 
   return (
     <>
@@ -159,11 +166,11 @@ export function InvoiceViewWrapper({
         useOverlay={useOverlay}
       />
 
-      {typeof amount === "number" && (
+      {numericAmount > 0 && (
         <PaymentSuccessCelebration
           open={showPaymentCelebration}
           onClose={() => setShowPaymentCelebration(false)}
-          amount={amount}
+          amount={numericAmount}
           currency={currency ?? "NGN"}
           invoiceNumber={invoiceNumber}
           invoiceToken={token}
