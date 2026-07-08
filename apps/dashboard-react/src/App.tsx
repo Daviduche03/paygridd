@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarLayout } from "@/components/sidebar";
+import { RootPage } from "@/components/root-page";
 
 import LoginPage from "@/pages/login";
 import VerifyPage from "@/pages/verify";
@@ -43,6 +44,7 @@ export default function App() {
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <Routes>
         <Route element={<PublicRoute />}>
+          <Route path="/" element={<RootPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/verify" element={<VerifyPage />} />
           <Route path="/p/:portalId" element={<div>Portal</div>} />
@@ -61,7 +63,7 @@ export default function App() {
           <Route path="/oauth/authorize" element={<OAuthAuthorizePage />} />
 
           <Route element={<SidebarLayout />}>
-            <Route path="/" element={<OverviewPage />} />
+            <Route path="/overview" element={<OverviewPage />} />
             <Route path="/transactions" element={<TransactionsPage />} />
             <Route path="/invoices" element={<InvoicesPage />} />
             <Route path="/virtual-accounts" element={<VirtualAccountsPage />} />

@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/config/db";
+import { env } from "@/config/env";
 import { businesses, users, usersOnBusiness } from "@/db/schema";
 
 export interface Business {
@@ -46,6 +47,7 @@ export const businessRepository = {
         name: data.name,
         baseCurrency: data.baseCurrency ?? "NGN",
         countryCode: data.countryCode ?? "NG",
+        platformChargeRate: String(env.PLATFORM_FEE_RATE),
       })
       .returning();
 

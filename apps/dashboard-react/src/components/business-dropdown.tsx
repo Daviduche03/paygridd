@@ -59,7 +59,7 @@ export function BusinessDropdown({ isExpanded = false }: Props) {
       onSuccess: async () => {
         queryClient.clear();
         setIsChanging(false);
-        navigate("/", { replace: true });
+        navigate("/overview", { replace: true });
       },
     }),
   );

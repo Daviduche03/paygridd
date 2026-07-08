@@ -24,7 +24,7 @@ export default function BusinessesPage() {
     <>
       <header className="w-full absolute left-0 right-0 flex justify-between items-center">
         <div className="p-6">
-          <Link to="/">
+          <Link to="/overview">
             <img src="/images/logo.png" alt="PayGrid" className="h-10 w-auto" />
           </Link>
         </div>

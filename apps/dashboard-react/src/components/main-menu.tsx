@@ -22,7 +22,7 @@ const icons = {
 } as const;
 
 const items = [
-  { path: "/", name: "Dashboard" },
+  { path: "/overview", name: "Dashboard" },
   { path: "/customers", name: "Customers" },
   { path: "/virtual-accounts", name: "Virtual Accounts" },
   { path: "/transactions", name: "Transactions" },

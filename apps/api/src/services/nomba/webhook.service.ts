@@ -1,6 +1,7 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { env } from "@/config/env";
 import { businessRepository } from "@/repositories/business.repository";
+import { calculatePlatformFee } from "@/utils/platform-fee";
 import { customerRepository } from "@/repositories/customer.repository";
 import { invoiceRepository } from "@/repositories/invoice.repository";
 import { transactionRepository } from "@/repositories/transaction.repository";
@@ -123,9 +124,10 @@ async function persistToDatabase(payload: NombaWebhookPayload) {
   const [business] = await Promise.all([
     businessRepository.findById(account.businessId),
   ]);
-  const rate = Number(business?.platformChargeRate ?? 0);
-  const platformFee = rate > 0 ? Math.round(amount * rate) / 100 : 0;
-  const netAmount = amount - platformFee;
+  const { platformFee, netAmount } = calculatePlatformFee(
+    amount,
+    business?.platformChargeRate,
+  );
 
   const created = await transactionRepository.createFromWebhook({
     businessId: account.businessId,

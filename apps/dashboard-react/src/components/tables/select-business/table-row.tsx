@@ -26,7 +26,7 @@ export function TableRow({ row }: Props) {
       },
       onSuccess: async () => {
         await queryClient.invalidateQueries();
-        navigate("/", { replace: true });
+        navigate("/overview", { replace: true });
       },
       onError: () => {
         setIsLoading(false);

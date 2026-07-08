@@ -11,6 +11,7 @@ import type { VirtualAccountTransactionResult } from "@/services/nomba/types";
 import { reconciliationService } from "@/services/reconciliation.service";
 import { virtualAccountService } from "@/services/virtual-account.service";
 import { getBusinessIdForUser } from "@/utils/business";
+import { calculatePlatformFee } from "@/utils/platform-fee";
 
 type InvoiceStatus =
   | "draft"
@@ -1090,9 +1091,10 @@ export const invoiceService = {
 
     const txAmount = Number(matchingTx.amount);
     const business = await businessRepository.findById(businessId);
-    const rate = Number(business?.platformChargeRate ?? 0);
-    const platformFee = rate > 0 ? Math.round(txAmount * rate) / 100 : 0;
-    const netAmount = txAmount - platformFee;
+    const { platformFee, netAmount } = calculatePlatformFee(
+      txAmount,
+      business?.platformChargeRate,
+    );
 
     const created = await transactionRepository.createFromWebhook({
       businessId,

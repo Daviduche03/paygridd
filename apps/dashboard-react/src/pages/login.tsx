@@ -18,7 +18,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (!token) return;
     setAuthToken(token);
-    navigate(returnTo?.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/", {
+    navigate(returnTo?.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/overview", {
       replace: true,
     });
   }, [token, returnTo, navigate]);
