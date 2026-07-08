@@ -21,7 +21,6 @@ import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
 import { useOnClickOutside } from "usehooks-ts";
-import { useSuccessSound } from "@/hooks/use-success-sound";
 import { downloadFile } from "@/lib/download";
 
 function StripeLogo({ className }: { className?: string }) {
@@ -198,7 +197,6 @@ export function PaymentModal({
   useOverlay = false,
 }: PaymentModalProps) {
   const { resolvedTheme } = useTheme();
-  const { play: playSuccessSound } = useSuccessSound();
   const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -381,9 +379,8 @@ export function PaymentModal({
   };
 
   const handleSuccess = (_paymentIntentId: string) => {
-    playSuccessSound();
-    setPaymentSuccess(true);
     onSuccess?.();
+    onOpenChange(false);
   };
 
   const stripePromise = useMemo(() => {

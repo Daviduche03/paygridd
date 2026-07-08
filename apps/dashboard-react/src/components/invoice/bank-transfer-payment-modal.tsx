@@ -6,12 +6,10 @@ import { Drawer, DrawerContent } from "ui/drawer";
 import { useMediaQuery } from "ui/hooks";
 import { Spinner } from "ui/spinner";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
 import { type RefObject, useEffect, useRef, useState } from "react";
 import { MdContentCopy } from "react-icons/md";
 import { useOnClickOutside } from "usehooks-ts";
 import { useCopyToClipboard } from "usehooks-ts";
-import { useSuccessSound } from "@/hooks/use-success-sound";
 import { useTRPC } from "@/trpc/client";
 
 type VirtualAccount = {
@@ -75,7 +73,6 @@ export function BankTransferPaymentModal({
   useOverlay = false,
 }: Props) {
   const trpc = useTRPC();
-  const { play: playSuccessSound } = useSuccessSound();
   const [paid, setPaid] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const panelRef = useRef<HTMLDivElement>(null);
@@ -87,12 +84,12 @@ export function BankTransferPaymentModal({
   });
 
   useEffect(() => {
-    if (invoice?.status === "paid") {
-      playSuccessSound();
+    if (invoice?.status === "paid" && !paid) {
       setPaid(true);
       onSuccess?.();
+      onOpenChange(false);
     }
-  }, [invoice?.status, onSuccess, playSuccessSound]);
+  }, [invoice?.status, onOpenChange, onSuccess, paid]);
 
   useOnClickOutside(panelRef as RefObject<HTMLElement>, (event) => {
     if (isDesktop && open && !useOverlay) {
@@ -112,30 +109,7 @@ export function BankTransferPaymentModal({
 
   const Content = ({ isMobile = false }: { isMobile?: boolean }) => (
     <div className={cn("flex flex-col", isMobile ? "h-full" : "flex-1 min-h-0")}>
-      {paid ? (
-        <div
-          className={cn(
-            "flex flex-col items-center justify-center text-center",
-            isMobile ? "h-full py-8 px-4" : "flex-1 min-h-0 py-8",
-          )}
-        >
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <h2 className="text-2xl font-serif mb-2">Payment received</h2>
-            <p className="text-muted-foreground mb-6">
-              Your transfer has been confirmed. Thank you.
-            </p>
-            <div className="border border-border p-4 text-center">
-              <p className="text-sm text-muted-foreground mb-1">Amount paid</p>
-              <p className="text-xl">{formatMoney(amount, currency)}</p>
-            </div>
-          </motion.div>
-        </div>
-      ) : (
-        <div className="flex flex-col flex-1 min-h-0">
+      <div className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
             <div>
               <h2 className="text-lg font-medium">Pay by bank transfer</h2>
@@ -179,7 +153,6 @@ export function BankTransferPaymentModal({
             </Button>
           </div>
         </div>
-      )}
     </div>
   );
 

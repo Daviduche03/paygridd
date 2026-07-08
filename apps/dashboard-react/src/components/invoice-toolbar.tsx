@@ -64,7 +64,6 @@ export default function InvoiceToolbar({
   const [internalPaymentOpen, setInternalPaymentOpen] = useState(false);
   const [isPaid, setIsPaid] = useState(status === "paid");
   const [shouldPrefetch, setShouldPrefetch] = useState(false);
-  const [paymentSucceeded, setPaymentSucceeded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
   const paymentModalOpen = isPaymentOpen ?? internalPaymentOpen;
@@ -162,8 +161,7 @@ export default function InvoiceToolbar({
     status !== "refunded" &&
     (paymentMethod === "stripe" || Boolean(virtualAccount?.accountNumber));
 
-  // Keep modal mounted while showing success screen
-  const shouldRenderModal = canPay || (paymentSucceeded && paymentModalOpen);
+  const shouldRenderModal = canPay;
 
   return (
     <>
@@ -304,9 +302,6 @@ export default function InvoiceToolbar({
             open={paymentModalOpen}
             onOpenChange={(open) => {
               setPaymentModalOpen(open);
-              if (!open && paymentSucceeded) {
-                setIsPaid(true);
-              }
             }}
             invoiceToken={token}
             amount={amount}
@@ -315,7 +310,7 @@ export default function InvoiceToolbar({
             virtualAccount={virtualAccount}
             useOverlay={useOverlay}
             onSuccess={() => {
-              setPaymentSucceeded(true);
+              setIsPaid(true);
               onPaymentSuccess?.();
             }}
           />
@@ -327,13 +322,7 @@ export default function InvoiceToolbar({
         paymentMethod === "stripe" && (
           <PaymentModal
             open={paymentModalOpen}
-            onOpenChange={(open) => {
-              setPaymentModalOpen(open);
-              // When modal closes after successful payment, update isPaid state
-              if (!open && paymentSucceeded) {
-                setIsPaid(true);
-              }
-            }}
+            onOpenChange={setPaymentModalOpen}
             invoiceToken={token}
             amount={amount}
             currency={currency || "usd"}
@@ -341,9 +330,7 @@ export default function InvoiceToolbar({
             prefetch={shouldPrefetch}
             useOverlay={useOverlay}
             onSuccess={() => {
-              // Mark payment as succeeded but don't set isPaid yet
-              // (that happens when modal closes, to keep modal mounted)
-              setPaymentSucceeded(true);
+              setIsPaid(true);
               onPaymentSuccess?.();
             }}
           />

@@ -2,10 +2,13 @@
 
 import { cn } from "ui/cn";
 import { useMediaQuery } from "ui/hooks";
+import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { PaymentSuccessCelebration } from "./invoice/payment-success-celebration";
 import CustomerHeader from "./customer-header";
 import InvoiceToolbar from "./invoice-toolbar";
+import { useTRPC } from "@/trpc/client";
 
 type Props = {
   token: string;
@@ -48,14 +51,30 @@ export function InvoiceViewWrapper({
   isPaymentOpen,
   invoiceWidth = 595,
 }: Props) {
+  const trpc = useTRPC();
   const [status, setStatus] = useState(initialStatus);
+  const [showPaymentCelebration, setShowPaymentCelebration] = useState(false);
   const [internalPaymentOpen, setInternalPaymentOpen] = useState(false);
   const [windowWidth, setWindowWidth] = useState(0);
   const isDesktop = useMediaQuery("(min-width: 768px)");
+  const wasPaidOnLoad = useRef(initialStatus === "paid");
+  const canPollPayment =
+    paymentEnabled &&
+    status !== "paid" &&
+    status !== "canceled" &&
+    status !== "refunded" &&
+    typeof amount === "number" &&
+    amount > 0;
 
-  // Track window width to determine if we should use overlay or push mode
+  const { data: liveInvoice } = useQuery({
+    ...trpc.invoice.getInvoiceByToken.queryOptions({ token }),
+    enabled: canPollPayment,
+    refetchInterval: canPollPayment ? 5000 : false,
+  });
+
   useEffect(() => {
     setStatus(initialStatus);
+    wasPaidOnLoad.current = initialStatus === "paid";
   }, [initialStatus]);
 
   useEffect(() => {
@@ -76,9 +95,18 @@ export function InvoiceViewWrapper({
   const minWidthNeeded = invoiceWidth + sheetWidth + 40;
   const useOverlay = windowWidth > 0 && windowWidth < minWidthNeeded;
 
-  const handlePaymentSuccess = () => {
+  const markPaymentSuccessful = () => {
     setStatus("paid");
+    if (!wasPaidOnLoad.current) {
+      setShowPaymentCelebration(true);
+    }
   };
+
+  useEffect(() => {
+    if (liveInvoice?.status === "paid" && status !== "paid") {
+      markPaymentSuccessful();
+    }
+  }, [liveInvoice?.status, status]);
 
   return (
     <>
@@ -123,13 +151,25 @@ export function InvoiceViewWrapper({
         amount={amount}
         currency={currency}
         status={status}
-        onPaymentSuccess={handlePaymentSuccess}
+        onPaymentSuccess={markPaymentSuccessful}
         portalEnabled={customerPortalEnabled}
         portalId={customerPortalId}
         onPaymentOpenChange={handlePaymentOpenChange}
         isPaymentOpen={paymentOpen}
         useOverlay={useOverlay}
       />
+
+      {typeof amount === "number" && (
+        <PaymentSuccessCelebration
+          open={showPaymentCelebration}
+          onClose={() => setShowPaymentCelebration(false)}
+          amount={amount}
+          currency={currency ?? "NGN"}
+          invoiceNumber={invoiceNumber}
+          invoiceToken={token}
+          customerName={customerName}
+        />
+      )}
     </>
   );
 }
