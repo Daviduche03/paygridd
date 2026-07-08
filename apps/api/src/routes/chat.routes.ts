@@ -458,7 +458,7 @@ For dates, be conversational (e.g., "March 15th" or "Today", "Yesterday").`;
             await conversationRepository.updateTitle(conversationId, title);
           }
         } catch (err) {
-          logger.error("Failed to save assistant message:", err);
+          logger.error("Failed to save assistant message: " + (err instanceof Error ? err.message : String(err)));
         }
       },
       onError: (error) => {

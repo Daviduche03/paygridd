@@ -82,7 +82,7 @@ filesRoutes.post(
   "/upload",
   authMiddleware,
   (req, res, next) => {
-    upload.single("file")(req, res, (err) => {
+    (upload.single("file") as any)(req, res, (err: any) => {
       if (err) {
         res.status(400).json({ success: false, error: err.message });
         return;

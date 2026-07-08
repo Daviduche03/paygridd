@@ -144,7 +144,7 @@ async function reconcileDynamicPayment(params: {
   invoiceId: string | null;
   reconciliationStatus?: ReconciliationStatus;
   excess?: number;
-}> {
+} | null> {
   const openInvoices =
     await invoiceRepository.findOpenInvoicesByVirtualAccountId(
       params.businessId,
@@ -200,7 +200,7 @@ async function reconcileStaticPayment(params: {
   invoiceId: string | null;
   reconciliationStatus?: ReconciliationStatus;
   excess?: number;
-}> {
+} | null> {
   const openInvoices = params.customerId
     ? await invoiceRepository.findOpenInvoicesByCustomerId(
         params.businessId,
@@ -254,7 +254,7 @@ export const reconciliationService = {
     invoiceId: string | null;
     reconciliationStatus?: ReconciliationStatus;
     excess?: number;
-  }> {
+  } | null> {
     const account = await virtualAccountRepository.findById(
       params.businessId,
       params.virtualAccountId,

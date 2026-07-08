@@ -48,7 +48,7 @@ export const conversationRepository = {
       .insert(conversations)
       .values({ businessId, title: title ?? null })
       .returning();
-    return row;
+    return row!;
   },
 
   async updateTitle(
@@ -99,7 +99,7 @@ export const conversationRepository = {
     await db.insert(chatMessages).values({
       conversationId,
       role: message.role,
-      content: message.content ?? null,
+      content: (message as any).content ?? null,
       parts: message.parts ?? null,
     });
   },
@@ -113,7 +113,7 @@ export const conversationRepository = {
       messages.map((m) => ({
         conversationId,
         role: m.role,
-        content: m.content ?? null,
+        content: (m as any).content ?? null,
         parts: (m as any).parts ?? null,
       })),
     );

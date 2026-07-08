@@ -16,8 +16,11 @@ export function LandingNav() {
           <a href="#features" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
             Features
           </a>
-          <a href="#how-it-works" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            How it works
+          <a href="#use-cases" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            Use cases
+          </a>
+          <a href="#faq" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            FAQ
           </a>
           <a
             href="/docs"
