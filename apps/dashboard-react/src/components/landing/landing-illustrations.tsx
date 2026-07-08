@@ -17,7 +17,7 @@ export function InvoiceIllustration({ className }: Props) {
       </text>
       <path
         d="M36 72 L48 72 L54 52 L66 108 L78 44 L90 72 L102 72"
-        stroke="#10b981"
+        stroke={stroke}
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -43,7 +43,7 @@ export function VirtualAccountIllustration({ className }: Props) {
       ))}
       <path
         d="M18 80 C30 60, 50 100, 30 48"
-        stroke="#10b981"
+        stroke={stroke}
         strokeWidth="1.5"
         strokeDasharray="4 4"
         opacity="0.5"
@@ -57,8 +57,8 @@ export function ReconciliationIllustration({ className }: Props) {
     <svg viewBox="0 0 200 160" fill="none" className={className} aria-hidden>
       <circle cx="56" cy="80" r="28" stroke={stroke} strokeWidth="1.5" opacity="0.3" />
       <circle cx="144" cy="80" r="28" stroke={stroke} strokeWidth="1.5" opacity="0.3" />
-      <path d="M84 80h32" stroke="#10b981" strokeWidth="2" strokeDasharray="6 4" opacity="0.8" />
-      <circle cx="100" cy="80" r="6" fill="#10b981" opacity="0.6" />
+      <path d="M84 80h32" stroke={stroke} strokeWidth="2" strokeDasharray="6 4" opacity="0.8" />
+      <circle cx="100" cy="80" r="6" fill={stroke} opacity="0.6" />
       <rect x="40" y="68" width="32" height="5" rx="1" fill={stroke} opacity="0.15" />
       <rect x="40" y="78" width="24" height="5" rx="1" fill={stroke} opacity="0.1" />
       <rect x="128" y="68" width="32" height="5" rx="1" fill={stroke} opacity="0.15" />
@@ -81,7 +81,7 @@ export function PayoutIllustration({ className }: Props) {
       <path d="M68 56h64M68 72h48M68 88h56" stroke={stroke} strokeWidth="1.5" opacity="0.15" />
       <path
         d="M100 108 L100 132 M88 120 L100 132 L112 120"
-        stroke="#10b981"
+        stroke={stroke}
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -107,7 +107,7 @@ export function ApiIllustration({ className }: Props) {
       />
       <rect x="78" y="56" width="44" height="56" rx="4" stroke={stroke} strokeWidth="1.5" opacity="0.35" />
       <path d="M88 72h24M88 84h16M88 96h20" stroke={stroke} strokeWidth="1.5" opacity="0.2" />
-      <circle cx="100" cy="112" r="3" fill="#10b981" opacity="0.6" />
+      <circle cx="100" cy="112" r="3" fill={stroke} opacity="0.6" />
       <path
         d="M48 120 Q100 140 152 120"
         stroke={stroke}
@@ -134,8 +134,8 @@ export function FlowSendIllustration({ className }: Props) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx="44" cy="70" r="12" stroke="#10b981" strokeWidth="1.5" opacity="0.5" />
-      <path d="M40 70 L48 70 M44 66 L48 70 L44 74" stroke="#10b981" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="44" cy="70" r="12" stroke={stroke} strokeWidth="1.5" opacity="0.5" />
+      <path d="M40 70 L48 70 M44 66 L48 70 L44 74" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
@@ -144,8 +144,8 @@ export function FlowReceiveIllustration({ className }: Props) {
   return (
     <svg viewBox="0 0 200 140" fill="none" className={className} aria-hidden>
       <rect x="40" y="50" width="120" height="48" rx="8" stroke={stroke} strokeWidth="1.5" opacity="0.3" />
-      <circle cx="68" cy="74" r="14" stroke="#10b981" strokeWidth="1.5" opacity="0.6" />
-      <path d="M64 74 L72 74 M68 70 L72 74 L68 78" stroke="#10b981" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="68" cy="74" r="14" stroke={stroke} strokeWidth="1.5" opacity="0.6" />
+      <path d="M64 74 L72 74 M68 70 L72 74 L68 78" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" />
       <rect x="92" y="64" width="52" height="5" rx="1" fill={stroke} opacity="0.15" />
       <rect x="92" y="76" width="36" height="5" rx="1" fill={stroke} opacity="0.1" />
       <path
@@ -169,7 +169,7 @@ export function FlowSettleIllustration({ className }: Props) {
       </text>
       <path
         d="M100 30 L100 10 M88 18 L100 10 L112 18"
-        stroke="#10b981"
+        stroke={stroke}
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -187,7 +187,7 @@ export function AgencyIllustration({ className }: Props) {
       <rect x="44" y="32" width="48" height="48" rx="4" stroke={stroke} strokeWidth="1.5" opacity="0.3" />
       <rect x="76" y="48" width="48" height="48" rx="4" stroke={stroke} strokeWidth="1.5" opacity="0.22" />
       <rect x="108" y="64" width="48" height="48" rx="4" stroke={stroke} strokeWidth="1.5" opacity="0.15" />
-      <path d="M68 80 L92 96 L116 88" stroke="#10b981" strokeWidth="1.5" opacity="0.6" strokeLinecap="round" />
+      <path d="M68 80 L92 96 L116 88" stroke={stroke} strokeWidth="1.5" opacity="0.6" strokeLinecap="round" />
       <circle cx="56" cy="108" r="8" stroke={stroke} strokeWidth="1.5" opacity="0.25" />
       <circle cx="100" cy="120" r="8" stroke={stroke} strokeWidth="1.5" opacity="0.2" />
       <circle cx="144" cy="108" r="8" stroke={stroke} strokeWidth="1.5" opacity="0.15" />
@@ -201,7 +201,7 @@ export function SaasIllustration({ className }: Props) {
       <circle cx="100" cy="80" r="36" stroke={stroke} strokeWidth="1.5" opacity="0.25" />
       <path
         d="M100 44 A36 36 0 0 1 136 80"
-        stroke="#10b981"
+        stroke={stroke}
         strokeWidth="2"
         opacity="0.6"
         strokeLinecap="round"
@@ -236,7 +236,7 @@ export function FinanceIllustration({ className }: Props) {
     <svg viewBox="0 0 200 160" fill="none" className={className} aria-hidden>
       <path
         d="M40 120 L72 88 L104 96 L136 56 L168 72"
-        stroke="#10b981"
+        stroke={stroke}
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"

@@ -28,7 +28,7 @@ const cases = [
     description:
       "Static virtual accounts for each subscriber. Renewals reconcile themselves when the transfer hits.",
     Illustration: SaasIllustration,
-    accent: "from-emerald-500/[0.06] to-transparent",
+    accent: "from-foreground/[0.04] to-transparent",
   },
   {
     label: "Finance teams",

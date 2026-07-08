@@ -25,7 +25,7 @@ const tiles = [
     description:
       "Every invoice includes a dedicated virtual account. Customers pay by transfer — you get notified when it lands.",
     Illustration: InvoiceIllustration,
-    accent: "from-emerald-500/[0.07] to-transparent",
+    accent: "from-foreground/[0.05] to-transparent",
   },
   {
     id: "accounts",
@@ -45,7 +45,7 @@ const tiles = [
     title: "Matched on arrival",
     description: "Transfers tie to invoices automatically. Only exceptions need your attention.",
     Illustration: ReconciliationIllustration,
-    accent: "from-emerald-500/[0.06] to-transparent",
+    accent: "from-foreground/[0.04] to-transparent",
   },
   {
     id: "payout",

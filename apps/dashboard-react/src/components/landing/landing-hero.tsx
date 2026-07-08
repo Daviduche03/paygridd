@@ -32,7 +32,7 @@ export function LandingHero() {
           <div
             className={`mb-6 inline-flex items-center gap-2 rounded-full border ${LB.inner} bg-background/60 px-3 py-1 text-xs text-muted-foreground backdrop-blur-sm`}
           >
-            <span className="size-1.5 rounded-full bg-emerald-500" />
+            <span className="size-1.5 rounded-full bg-foreground/70" />
             Built for Nigerian businesses
           </div>
 
