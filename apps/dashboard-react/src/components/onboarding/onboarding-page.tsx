@@ -17,6 +17,7 @@ import { useOnboardingTracking } from "@/hooks/use-onboarding-tracking";
 import { OnboardingUserMenu } from "./onboarding-user-menu";
 import { ConnectBankNigeriaStep } from "./steps/connect-bank-nigeria-step";
 import { CreateBusinessStep } from "./steps/create-business-step";
+import { ReconciliationStep } from "./steps/reconciliation-step";
 import { SetNameStep } from "./steps/set-name-step";
 
 type StepConfig = {
@@ -113,7 +114,7 @@ function ProgressBar({
   currentStep: number;
   totalSteps: number;
 }) {
-  if (currentStep >= totalSteps) return null;
+  if (currentStep > totalSteps) return null;
 
   return (
     <div className="flex justify-center">
@@ -221,6 +222,19 @@ export function OnboardingPage({
         navigation: "skip" as const,
         canGoBack: true,
         trackEvent: LogEvents.OnboardingStepCompleted,
+      },
+      // Step 4 — Reconciliation overview (final step)
+      {
+        key: "reconciliation",
+        animation: (
+          <div className="flex h-full w-full items-center justify-center p-6">
+            <BulkReconciliationAnimation />
+          </div>
+        ),
+        content: <ReconciliationStep />,
+        navigation: "next" as const,
+        canGoBack: true,
+        trackEvent: LogEvents.OnboardingCompleted,
       },
     ],
     [
