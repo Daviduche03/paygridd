@@ -96,8 +96,8 @@ export function SidebarLayout() {
         className="pb-4 md:ml-[70px]"
         style={{ paddingTop: TOP_BAR_HEIGHT }}
       >
-        <KybNudge />
         <div className="px-4 md:px-8">
+          <KybNudge />
           <Outlet />
         </div>
       </div>
@@ -121,12 +121,15 @@ function KybNudge() {
   return (
     <Link
       to="/settings/kyc"
-      className="mx-4 md:mx-8 mb-4 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20 px-4 py-2.5 text-sm text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/30 transition-colors"
+      className="mb-4 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900/30 dark:bg-amber-950/10 px-3 py-3 text-sm text-amber-700 dark:text-amber-300 transition-colors hover:bg-amber-100 dark:hover:bg-amber-950/20"
     >
-      <AlertTriangle className="size-4 shrink-0" />
-      <span>
-        Complete your business verification to unlock higher transaction limits.
-      </span>
+      <AlertTriangle className="size-4 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+      <div>
+        <p className="font-medium">Business verification required</p>
+        <p className="mt-0.5 text-amber-600 dark:text-amber-400">
+          Complete your KYB to unlock higher transaction limits.
+        </p>
+      </div>
     </Link>
   );
 }

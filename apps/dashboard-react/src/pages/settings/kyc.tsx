@@ -6,12 +6,13 @@ import { Input } from "ui/input";
 import { Label } from "ui/label";
 import { useToast } from "ui/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Clock, XCircle, Lock, Loader2 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { CheckCircle2, Clock, XCircle, Lock, Loader2, Upload } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 import { ScrollableContent } from "@/components/scrollable-content";
 import { SettingsTabs } from "@/components/settings-tabs";
-import { ConnectBankNigeriaStep } from "@/components/onboarding/steps/connect-bank-nigeria-step";
 import { useTRPC } from "@/trpc/client";
+import { useUpload } from "@/hooks/use-upload";
+import { cn } from "ui/cn";
 
 const TIER_INFO: Record<string, { name: string; color: string; description: string }> = {
   tier_1: { name: "Tier 1", color: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300", description: "Basic" },
@@ -51,6 +52,61 @@ function StatusBadge({ status }: { status: string }) {
 
 function formatCurrency(n: number): string {
   return `₦${n.toLocaleString()}`;
+}
+
+function FileUploadInput({
+  label,
+  value,
+  onChange,
+  accept = "image/*",
+  bucket = "kyb-docs",
+}: {
+  label: string;
+  value: string;
+  onChange: (url: string) => void;
+  accept?: string;
+  bucket?: string;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { uploadFile, isLoading } = useUpload();
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const { url } = await uploadFile({ file, path: [file.name], bucket });
+    if (url) onChange(url);
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      <div
+        onClick={() => inputRef.current?.click()}
+        className={cn(
+          "flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-border px-3 py-2.5 text-sm transition-colors hover:border-muted-foreground/50",
+          value && "border-solid border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/10",
+        )}
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            <span className="text-muted-foreground">Uploading...</span>
+          </>
+        ) : value ? (
+          <>
+            <CheckCircle2 className="size-4 text-emerald-500" />
+            <span className="truncate text-muted-foreground">Uploaded</span>
+          </>
+        ) : (
+          <>
+            <Upload className="size-4 text-muted-foreground" />
+            <span className="text-muted-foreground">{label}</span>
+          </>
+        )}
+      </div>
+      <input ref={inputRef} type="file" accept={accept} className="hidden" onChange={handleFile} />
+    </div>
+  );
 }
 
 export default function KycSettingsPage() {
@@ -94,12 +150,6 @@ export default function KycSettingsPage() {
       },
     }),
   });
-
-  const handleBankComplete = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: trpc.business.get.queryKey() });
-    queryClient.invalidateQueries({ queryKey: trpc.business.list.queryKey() });
-    toast({ duration: 2500, title: "Bank account connected", variant: "success" });
-  }, [queryClient, trpc]);
 
   if (isLoading) {
     return (
@@ -246,15 +296,11 @@ export default function KycSettingsPage() {
                     placeholder="RC 1234567"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="cacDocumentUrl">CAC Certificate URL</Label>
-                  <Input
-                    id="cacDocumentUrl"
-                    value={cacDocumentUrl}
-                    onChange={(e) => setCacDocumentUrl(e.target.value)}
-                    placeholder="https://..."
-                  />
-                </div>
+                <FileUploadInput
+                  label="CAC Certificate"
+                  value={cacDocumentUrl}
+                  onChange={setCacDocumentUrl}
+                />
                 <div className="space-y-1.5">
                   <Label htmlFor="directorName">Director Name</Label>
                   <Input
@@ -273,15 +319,12 @@ export default function KycSettingsPage() {
                     placeholder="080..."
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="addressProof">Proof of Business Address URL</Label>
-                  <Input
-                    id="addressProof"
-                    value={addressProofUrl}
-                    onChange={(e) => setAddressProofUrl(e.target.value)}
-                    placeholder="https://..."
-                  />
-                </div>
+                <FileUploadInput
+                  label="Proof of Business Address"
+                  value={addressProofUrl}
+                  onChange={setAddressProofUrl}
+                  accept="image/*,.pdf"
+                />
               </CardContent>
               <CardFooter>
                 <Button
@@ -328,15 +371,12 @@ export default function KycSettingsPage() {
                     placeholder="Enter 11-digit BVN"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="memorandumUrl">MEMART URL</Label>
-                  <Input
-                    id="memorandumUrl"
-                    value={memorandumUrl}
-                    onChange={(e) => setMemorandumUrl(e.target.value)}
-                    placeholder="https://..."
-                  />
-                </div>
+                <FileUploadInput
+                  label="Memorandum & Articles of Association"
+                  value={memorandumUrl}
+                  onChange={setMemorandumUrl}
+                  accept="image/*,.pdf"
+                />
               </CardContent>
               <CardFooter>
                 <Button
@@ -349,12 +389,6 @@ export default function KycSettingsPage() {
               </CardFooter>
             </Card>
           )}
-
-          <Card>
-            <CardContent>
-              <ConnectBankNigeriaStep onComplete={handleBankComplete} />
-            </CardContent>
-          </Card>
         </div>
       </div>
     </ScrollableContent>
