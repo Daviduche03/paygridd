@@ -17,7 +17,7 @@ const icons = {
   "/transactions": () => <Icons.Transactions size={20} />,
   "/invoices": () => <Icons.ReceiptLong size={20} />,
   "/reconciliation": () => <GitCompareArrows size={20} />,
-  "/automation": () => <Zap size={20} />,
+  // "/automation": () => <Zap size={20} />,
   "/settings": () => <Icons.Settings size={20} />,
 } as const;
 
@@ -28,7 +28,7 @@ const items = [
   { path: "/transactions", name: "Transactions" },
   { path: "/invoices", name: "Invoices" },
   { path: "/reconciliation", name: "Reconciliation" },
-  { path: "/automation", name: "Automation" },
+  // { path: "/automation", name: "Automation" },
   { path: "/settings", name: "Settings" },
 ];
 
