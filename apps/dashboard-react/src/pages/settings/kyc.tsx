@@ -4,10 +4,9 @@ import { Button } from "ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "ui/card";
 import { Input } from "ui/input";
 import { Label } from "ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "ui/select";
 import { useToast } from "ui/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Circle, Lock, Loader2 } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, Lock, Loader2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { ScrollableContent } from "@/components/scrollable-content";
 import { SettingsTabs } from "@/components/settings-tabs";
@@ -16,8 +15,8 @@ import { useTRPC } from "@/trpc/client";
 
 const TIER_INFO: Record<string, { name: string; color: string; description: string }> = {
   tier_1: { name: "Tier 1", color: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300", description: "Basic" },
-  tier_2: { name: "Tier 2", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300", description: "BVN Verified" },
-  tier_3: { name: "Tier 3", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300", description: "Full KYC" },
+  tier_2: { name: "Tier 2", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300", description: "Registered Business" },
+  tier_3: { name: "Tier 3", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300", description: "Full KYB" },
 };
 
 function TierBadge({ tier }: { tier: string }) {
@@ -30,6 +29,26 @@ function TierBadge({ tier }: { tier: string }) {
   );
 }
 
+function StatusBadge({ status }: { status: string }) {
+  if (status === "pending_review") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+        <Clock className="size-3" />
+        Pending Review
+      </span>
+    );
+  }
+  if (status === "rejected") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+        <XCircle className="size-3" />
+        Rejected
+      </span>
+    );
+  }
+  return null;
+}
+
 function formatCurrency(n: number): string {
   return `₦${n.toLocaleString()}`;
 }
@@ -39,37 +58,24 @@ export default function KycSettingsPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: kyc, isLoading } = useQuery(trpc.kyc.status.queryOptions());
+  const { data: kyb, isLoading } = useQuery(trpc.kyc.status.queryOptions());
 
-  const [bvn, setBvn] = useState("");
-  const [idType, setIdType] = useState("");
-  const [idNumber, setIdNumber] = useState("");
-  const [idFrontUrl, setIdFrontUrl] = useState("");
-  const [idBackUrl, setIdBackUrl] = useState("");
+  // Tier 2 form
+  const [rcNumber, setRcNumber] = useState("");
+  const [cacDocumentUrl, setCacDocumentUrl] = useState("");
+  const [directorName, setDirectorName] = useState("");
+  const [directorPhone, setDirectorPhone] = useState("");
   const [addressProofUrl, setAddressProofUrl] = useState("");
 
-  const submitBvn = useMutation({
-    ...trpc.kyc.submitBvn.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: trpc.kyc.status.queryKey() });
-        toast({ title: "BVN verified", description: "Your account has been upgraded to Tier 2" });
-        setBvn("");
-      },
-      onError: (error: any) => {
-        toast({ title: "Verification failed", description: error.message, variant: "info" });
-      },
-    }),
-  });
+  // Tier 3 form
+  const [directorBvn, setDirectorBvn] = useState("");
+  const [memorandumUrl, setMemorandumUrl] = useState("");
 
-  const submitId = useMutation({
-    ...trpc.kyc.submitId.mutationOptions({
+  const submitTier2 = useMutation({
+    ...trpc.kyc.submitTier2.mutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: trpc.kyc.status.queryKey() });
-        toast({ title: "ID submitted", description: "Your ID document has been submitted for verification" });
-        setIdType("");
-        setIdNumber("");
-        setIdFrontUrl("");
-        setIdBackUrl("");
+        toast({ title: "Documents submitted", description: "Your Tier 2 application is pending review" });
       },
       onError: (error: any) => {
         toast({ title: "Submission failed", description: error.message, variant: "info" });
@@ -77,12 +83,11 @@ export default function KycSettingsPage() {
     }),
   });
 
-  const submitAddress = useMutation({
-    ...trpc.kyc.submitAddress.mutationOptions({
+  const submitTier3 = useMutation({
+    ...trpc.kyc.submitTier3.mutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: trpc.kyc.status.queryKey() });
-        toast({ title: "Address submitted", description: "Your address proof has been submitted for verification" });
-        setAddressProofUrl("");
+        toast({ title: "Documents submitted", description: "Your Tier 3 application is pending review" });
       },
       onError: (error: any) => {
         toast({ title: "Submission failed", description: error.message, variant: "info" });
@@ -138,7 +143,12 @@ export default function KycSettingsPage() {
     );
   }
 
-  if (!kyc) return null;
+  if (!kyb) return null;
+
+  const needsTier2 = kyb.tier === "tier_1" && kyb.nextTier === "tier_2";
+  const needsTier3 = kyb.tier === "tier_2" && kyb.nextTier === "tier_3";
+  const isPending = kyb.status === "pending_review";
+  const isRejected = kyb.status === "rejected";
 
   return (
     <ScrollableContent>
@@ -148,23 +158,32 @@ export default function KycSettingsPage() {
         <div className="space-y-8">
           <Card>
             <CardHeader>
-              <CardTitle>KYC Verification Level</CardTitle>
+              <CardTitle>KYB Verification Level</CardTitle>
               <CardDescription>
-                Your current verification tier determines your transaction limits.
+                Your Know Your Business (KYB) tier determines your transaction limits.
                 Higher tiers unlock higher limits.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center gap-3">
-                <TierBadge tier={kyc.tier} />
+                <TierBadge tier={kyb.tier} />
+                {isPending && <StatusBadge status="pending_review" />}
+                {isRejected && <StatusBadge status="rejected" />}
               </div>
+
+              {isRejected && kyb.rejectionReason && (
+                <div className="rounded-md border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900/50 px-4 py-3">
+                  <p className="text-sm font-medium text-red-800 dark:text-red-300">Rejection reason</p>
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-1">{kyb.rejectionReason}</p>
+                </div>
+              )}
 
               <div className="grid gap-4 sm:grid-cols-4">
                 {[
-                  { label: "Daily limit", value: formatCurrency(kyc.limits.dailyTransactionLimit) },
-                  { label: "Monthly limit", value: formatCurrency(kyc.limits.monthlyTransactionLimit) },
-                  { label: "Per transaction", value: formatCurrency(kyc.limits.perTransactionLimit) },
-                  { label: "Max balance", value: kyc.limits.maxBalance ? formatCurrency(kyc.limits.maxBalance) : "Unlimited" },
+                  { label: "Daily limit", value: formatCurrency(kyb.limits.dailyTransactionLimit) },
+                  { label: "Monthly limit", value: formatCurrency(kyb.limits.monthlyTransactionLimit) },
+                  { label: "Per transaction", value: formatCurrency(kyb.limits.perTransactionLimit) },
+                  { label: "Max balance", value: kyb.limits.maxBalance ? formatCurrency(kyb.limits.maxBalance) : "Unlimited" },
                 ].map((item) => (
                   <div key={item.label} className="border border-border rounded-md p-3">
                     <div className="text-xs text-muted-foreground">{item.label}</div>
@@ -179,138 +198,155 @@ export default function KycSettingsPage() {
             <CardHeader>
               <CardTitle>Verification Status</CardTitle>
               <CardDescription>
-                Complete the requirements below to upgrade your tier
+                Requirements to upgrade your business tier
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <RequirementRow
-                label="BVN (Bank Verification Number)"
-                met={kyc.bvn.verified}
-                value={kyc.bvn.value}
+                label="RC Number (CAC registration)"
+                met={kyb.tier2.submitted}
+                value={kyb.tier2.data?.rcNumber}
               />
               <RequirementRow
-                label="Government-issued ID"
-                met={kyc.id.verified}
-                value={kyc.id.type ? `${kyc.id.type} — ${kyc.id.number}` : undefined}
+                label="Business director details"
+                met={kyb.tier2.submitted}
+                value={kyb.tier2.data?.directorName ? `${kyb.tier2.data.directorName} — ${kyb.tier2.data.directorPhone}` : undefined}
               />
               <RequirementRow
-                label="Proof of address"
-                met={kyc.address.verified}
+                label="Proof of business address"
+                met={kyb.tier2.submitted}
+              />
+              <RequirementRow
+                label="Director BVN (Tier 3)"
+                met={kyb.tier3.submitted}
+                value={kyb.tier3.data?.directorBvn}
+              />
+              <RequirementRow
+                label="Memorandum & Articles of Association (Tier 3)"
+                met={kyb.tier3.submitted}
               />
             </CardContent>
           </Card>
 
-          {kyc.nextTier && (
+          {needsTier2 && (kyb.status === "none" || isRejected) && (
             <Card>
               <CardHeader>
-                <CardTitle>Upgrade to {TIER_INFO[kyc.nextTier]?.name}</CardTitle>
+                <CardTitle>Upgrade to Tier 2 — Registered Business</CardTitle>
                 <CardDescription>
-                  {kyc.nextTier === "tier_2"
-                    ? "Submit your BVN to upgrade to Tier 2 and unlock higher limits."
-                    : "Submit your ID and address proof to upgrade to Tier 3 (full KYC)."}
+                  Submit your business registration details for manual review.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {kyc.nextTier === "tier_2" && !kyc.bvn.verified && (
-                  <div className="space-y-3">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="bvn">BVN (11 digits)</Label>
-                      <Input
-                        id="bvn"
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={11}
-                        value={bvn}
-                        onChange={(e) => setBvn(e.target.value.replace(/\D/g, ""))}
-                        placeholder="Enter your 11-digit BVN"
-                      />
-                    </div>
-                    <Button
-                      onClick={() => submitBvn.mutate({ bvn })}
-                      disabled={bvn.length !== 11 || submitBvn.isPending}
-                    >
-                      {submitBvn.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
-                      Verify BVN
-                    </Button>
-                  </div>
-                )}
-
-                {(kyc.nextTier === "tier_3" || (kyc.tier === "tier_2" && !kyc.id.verified)) && (
-                  <div className="space-y-3 border-t border-border pt-4">
-                    <h4 className="text-sm font-medium">Government-issued ID</h4>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="idType">ID Type</Label>
-                      <Select value={idType} onValueChange={setIdType}>
-                        <SelectTrigger id="idType">
-                          <SelectValue placeholder="Select ID type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="national_id">National ID</SelectItem>
-                          <SelectItem value="passport">International Passport</SelectItem>
-                          <SelectItem value="drivers_license">Driver&apos;s License</SelectItem>
-                          <SelectItem value="voters_card">Voter&apos;s Card</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="idNumber">ID Number</Label>
-                      <Input
-                        id="idNumber"
-                        value={idNumber}
-                        onChange={(e) => setIdNumber(e.target.value)}
-                        placeholder="Enter ID number"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="idFront">Front image URL</Label>
-                      <Input
-                        id="idFront"
-                        value={idFrontUrl}
-                        onChange={(e) => setIdFrontUrl(e.target.value)}
-                        placeholder="https://..."
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="idBack">Back image URL (optional)</Label>
-                      <Input
-                        id="idBack"
-                        value={idBackUrl}
-                        onChange={(e) => setIdBackUrl(e.target.value)}
-                        placeholder="https://..."
-                      />
-                    </div>
-                    <Button
-                      onClick={() => submitId.mutate({ idType, idNumber, idFrontUrl, idBackUrl: idBackUrl || undefined })}
-                      disabled={!idType || !idNumber || !idFrontUrl || submitId.isPending}
-                    >
-                      {submitId.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
-                      Submit ID
-                    </Button>
-                  </div>
-                )}
-
-                {(kyc.nextTier === "tier_3" || (kyc.tier === "tier_2" && !kyc.address.verified)) && (
-                  <div className="space-y-3 border-t border-border pt-4">
-                    <h4 className="text-sm font-medium">Proof of address</h4>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="addressProof">Document URL</Label>
-                      <Input
-                        id="addressProof"
-                        value={addressProofUrl}
-                        onChange={(e) => setAddressProofUrl(e.target.value)}
-                        placeholder="https://..."
-                      />
-                    </div>
-                    <Button
-                      onClick={() => submitAddress.mutate({ proofUrl: addressProofUrl })}
-                      disabled={!addressProofUrl || submitAddress.isPending}
-                    >
-                      {submitAddress.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
-                      Submit address proof
-                    </Button>
-                  </div>
-                )}
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="rcNumber">RC Number</Label>
+                  <Input
+                    id="rcNumber"
+                    value={rcNumber}
+                    onChange={(e) => setRcNumber(e.target.value)}
+                    placeholder="RC 1234567"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cacDocumentUrl">CAC Certificate URL</Label>
+                  <Input
+                    id="cacDocumentUrl"
+                    value={cacDocumentUrl}
+                    onChange={(e) => setCacDocumentUrl(e.target.value)}
+                    placeholder="https://..."
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="directorName">Director Name</Label>
+                  <Input
+                    id="directorName"
+                    value={directorName}
+                    onChange={(e) => setDirectorName(e.target.value)}
+                    placeholder="Full name of business director"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="directorPhone">Director Phone</Label>
+                  <Input
+                    id="directorPhone"
+                    value={directorPhone}
+                    onChange={(e) => setDirectorPhone(e.target.value)}
+                    placeholder="080..."
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="addressProof">Proof of Business Address URL</Label>
+                  <Input
+                    id="addressProof"
+                    value={addressProofUrl}
+                    onChange={(e) => setAddressProofUrl(e.target.value)}
+                    placeholder="https://..."
+                  />
+                </div>
               </CardContent>
+              <CardFooter>
+                <Button
+                  onClick={() => submitTier2.mutate({ rcNumber, cacDocumentUrl, directorName, directorPhone, businessAddressProofUrl: addressProofUrl })}
+                  disabled={!rcNumber || !cacDocumentUrl || !directorName || !directorPhone || !addressProofUrl || submitTier2.isPending}
+                >
+                  {submitTier2.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
+                  Submit for Review
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+
+          {isPending && (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <Clock className="size-8 mx-auto text-muted-foreground mb-3" />
+                <p className="text-sm font-medium">Application Pending Review</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Your documents are being reviewed. You'll be notified when the review is complete.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {needsTier3 && (kyb.status === "none" || isRejected) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Upgrade to Tier 3 — Full KYB</CardTitle>
+                <CardDescription>
+                  Submit director BVN and Memorandum & Articles of Association.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="directorBvn">Director BVN (11 digits)</Label>
+                  <Input
+                    id="directorBvn"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={11}
+                    value={directorBvn}
+                    onChange={(e) => setDirectorBvn(e.target.value.replace(/\D/g, ""))}
+                    placeholder="Enter 11-digit BVN"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="memorandumUrl">MEMART URL</Label>
+                  <Input
+                    id="memorandumUrl"
+                    value={memorandumUrl}
+                    onChange={(e) => setMemorandumUrl(e.target.value)}
+                    placeholder="https://..."
+                  />
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  onClick={() => submitTier3.mutate({ directorBvn, memorandumUrl })}
+                  disabled={directorBvn.length !== 11 || !memorandumUrl || submitTier3.isPending}
+                >
+                  {submitTier3.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
+                  Submit for Review
+                </Button>
+              </CardFooter>
             </Card>
           )}
 
@@ -331,7 +367,7 @@ function RequirementRow({ label, met, value }: { label: string; met: boolean; va
       {met ? (
         <CheckCircle2 className="size-5 text-emerald-500 mt-0.5 shrink-0" />
       ) : (
-        <Circle className="size-5 text-muted-foreground mt-0.5 shrink-0" />
+        <div className="size-5 rounded-full border-2 border-muted-foreground mt-0.5 shrink-0" />
       )}
       <div className="min-w-0">
         <div className="text-sm font-medium">{label}</div>

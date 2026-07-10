@@ -21,6 +21,7 @@ export const businessRoleEnum = pgEnum("business_role", [
 ]);
 
 export const kycTierEnum = pgEnum("kyc_tier", ["tier_1", "tier_2", "tier_3"]);
+export const kybStatusEnum = pgEnum("kyb_status", ["none", "pending_review", "approved", "rejected"]);
 
 export const virtualAccountStatusEnum = pgEnum("virtual_account_status", [
   "active",
@@ -135,6 +136,39 @@ export const businessKyc = pgTable("business_kyc", {
     .references(() => businesses.id, { onDelete: "cascade" })
     .unique(),
   tier: kycTierEnum().default("tier_1").notNull(),
+  kybStatus: kybStatusEnum("kyb_status").default("none").notNull(),
+  rejectionReason: text("rejection_reason"),
+  reviewedBy: uuid("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true, mode: "string" }),
+
+  // Tier 2 — Registered Business
+  rcNumber: text("rc_number"),
+  cacDocumentUrl: text("cac_document_url"),
+  directorName: text("director_name"),
+  directorPhone: text("director_phone"),
+  businessAddressProofUrl: text("business_address_proof_url"),
+  tier2SubmittedAt: timestamp("tier_2_submitted_at", {
+    withTimezone: true,
+    mode: "string",
+  }),
+  tier2ApprovedAt: timestamp("tier_2_approved_at", {
+    withTimezone: true,
+    mode: "string",
+  }),
+
+  // Tier 3 — Full KYB
+  directorBvn: text("director_bvn"),
+  memorandumUrl: text("memorandum_url"),
+  tier3SubmittedAt: timestamp("tier_3_submitted_at", {
+    withTimezone: true,
+    mode: "string",
+  }),
+  tier3ApprovedAt: timestamp("tier_3_approved_at", {
+    withTimezone: true,
+    mode: "string",
+  }),
+
+  // Deprecated KYC fields (kept for history, not used by new flow)
   bvn: text(),
   bvnVerifiedAt: timestamp("bvn_verified_at", {
     withTimezone: true,
@@ -153,6 +187,7 @@ export const businessKyc = pgTable("business_kyc", {
     withTimezone: true,
     mode: "string",
   }),
+
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
     .defaultNow()
     .notNull(),

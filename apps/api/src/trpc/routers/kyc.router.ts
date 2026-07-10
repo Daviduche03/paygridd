@@ -16,31 +16,14 @@ export const kycRouter = t.router({
     return kycService.getStatus(businessId);
   }),
 
-  submitBvn: protectedProcedure
-    .input(z.object({ bvn: z.string().length(11) }))
-    .mutation(async ({ ctx, input }) => {
-      const businessId = await getBusinessIdForUser(ctx.user.id);
-      if (!businessId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "No business found",
-        });
-      }
-      return kycService.submitBvn(businessId, input.bvn);
-    }),
-
-  submitId: protectedProcedure
+  submitTier2: protectedProcedure
     .input(
       z.object({
-        idType: z.enum([
-          "national_id",
-          "passport",
-          "drivers_license",
-          "voters_card",
-        ]),
-        idNumber: z.string().min(1),
-        idFrontUrl: z.string().url(),
-        idBackUrl: z.string().url().optional(),
+        rcNumber: z.string().min(1),
+        cacDocumentUrl: z.string().url(),
+        directorName: z.string().min(1),
+        directorPhone: z.string().min(1),
+        businessAddressProofUrl: z.string().url(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -51,11 +34,16 @@ export const kycRouter = t.router({
           message: "No business found",
         });
       }
-      return kycService.submitId(businessId, input);
+      return kycService.submitTier2(businessId, input);
     }),
 
-  submitAddress: protectedProcedure
-    .input(z.object({ proofUrl: z.string().url() }))
+  submitTier3: protectedProcedure
+    .input(
+      z.object({
+        directorBvn: z.string().length(11),
+        memorandumUrl: z.string().url(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const businessId = await getBusinessIdForUser(ctx.user.id);
       if (!businessId) {
@@ -64,6 +52,29 @@ export const kycRouter = t.router({
           message: "No business found",
         });
       }
-      return kycService.submitAddress(businessId, input.proofUrl);
+      return kycService.submitTier3(businessId, input);
+    }),
+
+  approveTier2: protectedProcedure
+    .input(z.object({ businessId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      return kycService.approveTier2(input.businessId, ctx.user.id);
+    }),
+
+  approveTier3: protectedProcedure
+    .input(z.object({ businessId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      return kycService.approveTier3(input.businessId, ctx.user.id);
+    }),
+
+  reject: protectedProcedure
+    .input(
+      z.object({
+        businessId: z.string().uuid(),
+        reason: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return kycService.reject(input.businessId, ctx.user.id, input.reason);
     }),
 });
